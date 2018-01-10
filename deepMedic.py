@@ -6,26 +6,19 @@ Created on Wed Dec  6 13:58:48 2017
 @author: lukas
 """
 import os
-os.chdir('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/')
-
-import numpy as np
-import scipy as sp
-from keras.utils import plot_model
 import matplotlib.pyplot as plt
-
 import time
 from model import DeepMedic
-from helpers import sampleTrainData, generateAllForegroundVoxels
+from helpers import sampleTrainData, fullHeadSegmentation
 from random import shuffle
 
-from helpers import sampleTestData
-import nibabel as nib
-from sklearn import metrics
+
+os.chdir('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/')
 
 ###################   parameters // replace with config files ########################
 
 
-dataset = 'BRATS15'
+dataset = 'ATLAS17'
 
 
 if dataset == 'BRATS15':
@@ -36,8 +29,7 @@ if dataset == 'BRATS15':
                     '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1c.cfg',
                     '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT2.cfg']
     groundTruthChannel_list = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainGT.cfg'
-    #channelsList = ['/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Data/BRATS15_examples/trainFlair_30.cfg','/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Data/BRATS15_examples/trainT2_30.cfg','/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Data/BRATS15_examples/trainT1c_30.cfg','/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Data/BRATS15_examples/trainT1_30.cfg']
-    #groundTruthChannel_list = '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Data/BRATS15_examples/trainGT_30.cfg'
+
     channelsList_validation = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valFlair.cfg',
                                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1.cfg',
                                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1c.cfg',
@@ -53,57 +45,24 @@ if dataset == 'BRATS15':
 
 elif dataset == 'ATLAS17':
     '''Example data ATLAS 2017 - 1 input channel - 2 output classes'''
-    channelsList = ['/home/lukas/Documents/projects/ATLASdataset/nativeDatasetAddress_2subjects_Train.txt']
-    groundTruthChannel_list = '/home/lukas/Documents/projects/ATLASdataset/nativeDatasetAddress_2subjects_Train_GT.txt'
-    channelsList_validation = ['/home/lukas/Documents/projects/ATLASdataset/nativeDatasetAddress_2subjects_Val.txt']
-    groundTruthChannel_list_validation = '/home/lukas/Documents/projects/ATLASdataset/nativeDatasetAddress_2subjects_Val_GT.txt'
+    
+    channelsList = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/splits1/ChannelsTrain_splits1.cfg']
+    groundTruthChannel_list = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/splits1/SegmentsTrain_splits1.cfg'
+    
+    channelsList_validation = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/validation/splits1/ChannelsVal_splits1.cfg']
+    groundTruthChannel_list_validation = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/validation/splits1/SegmentsVal_splits1.cfg'
+
+    testChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/test/splits1/ChannelsTest_splits1.cfg']
+    testLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/test/splits1/SegmentsTest_splits1.cfg'
+
     output_classes = 2 # Including background!!
-    testChannels = ['/home/lukas/Documents/projects/ATLASdataset/nativeDatasetAddress_2subjects_Train.txt']
-    testLabels = '/home/lukas/Documents/projects/ATLASdataset/nativeDatasetAddress_2subjects_Train_GT.txt'
-
-
-#channelsList = ['/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Data/ATLAS_dataset_examples/trainChannels20_t1c.cfg']
-#groundTruthChannel_list = '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Data/ATLAS_dataset_examples/trainGtLabels20.cfg'
-# Parameters // this could be assigned in separate configuration files
-
-num_iter = 40
-epochs = 10
-n_patches = 1000
-n_patches_val = 500
-n_subjects = 50
-samplingMethod = 1
-size_minibatches = 200
-
-# TEST PARAMETERS
-epochs_for_fullSegmentation = [1,3,6,9]
-size_test_minibatches = 200
-
-
-
-
+    
+    
 usingLoadedData = False
 allBatchesAddress = '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/allBatches.pkl'
 allLabelsAddress =  '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/allLabels.pkl'
 allValBatchesAddress = '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/allValBatches.pkl'
 allValLabelsAddress = '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/allValLabels.pkl'
-
-#model Parameters
-dpatch=51
-
-
-############################## createmodel ###########################################
-
-dm = DeepMedic(dpatch, output_classes, num_channels, L2=0)
-model = dm.createModel()
-#plot_model(model, to_file='multichannel.png', show_shapes=True)
-
-############################## train model ###########################################
-
-train_performance = []
-val_performance = []
-val1_performance = []
-
-
 
 if(usingLoadedData):
     print("Loading collected data")
@@ -121,15 +80,46 @@ if(usingLoadedData):
         print(allValLabelsAddress)
         allValLabels = pickle.load(fp)
 
+# Parameters // this could be assigned in separate configuration files
+
+# MODEL PARAMETERS
+num_channels = len(channelsList)
+dpatch=51
+L2 = 0
+
+# TRAIN PARAMETERS
+num_iter = 1
+epochs = 10
+n_patches = 10
+n_patches_val = 10
+n_subjects = 2
+samplingMethod = 1
+size_minibatches = 1
+
+
+# TEST PARAMETERS
+list_subjects_fullSegmentation = [0]
+epochs_for_fullSegmentation = [0,3,6,9]
+size_test_minibatches = 200
+
+load_model = False
+
+############################## create model ###########################################
+if load_model == False:
+    dm = DeepMedic(dpatch, output_classes, num_channels, L2)
+    model = dm.createModel()
+    #plot_model(model, to_file='multichannel.png', show_shapes=True)
+
+############################## train model ###########################################
+
+train_performance = []
+val_performance = []
+val1_performance = []
 
 #allForegroundVoxels = generateAllForegroundVoxels(groundTruthChannel_list, dpatch)
 
-
-
 l = 0
 t1 = time.time()
-num_channels = len(channelsList)
-#class_weight = {0:1 , 1:1, 2:1, 3:1, 4:1}
 
 for epoch in xrange(0,epochs):
     print("######################################################")
@@ -172,8 +162,6 @@ for epoch in xrange(0,epochs):
                 #minivalbatch1 = valbatch1[start:end,:,:,:,:]    
                 #minivalbatch_labels1 = vallabels1[start:end,:,:,:,:]  
                 #val1_performance.append(model.evaluate(minivalbatch1, minivalbatch_labels1))
-               
-                    
                 start = end
         else:
             train_performance.append(model.train_on_batch(allBatches[k[i]], allLabels[k[i]]))#, class_weight = class_weight1)
@@ -186,10 +174,9 @@ for epoch in xrange(0,epochs):
     print(round(time.time()-t1,2))
     if epoch in epochs_for_fullSegmentation:
         test_performance = []
-        for subjectIndex in range(list_subjects_fullSegmentation):
-            fullHeadSegmentation(testChannels, testLabels, subjectIndex, groundTruthChannel_list, output_classes, dpatch, size_test_minibatches, saveSegmentation = False)
-    
-    
+        for subjectIndex in list_subjects_fullSegmentation:
+            fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, saveSegmentation = False)
+        
 #https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model
 #from keras.models import load_model     
 #model.save('Brats15_model2.h5')

@@ -147,7 +147,7 @@ def extractLabels(groundTruthChannel_list, subjectIndexes, voxelCoordinates, dpa
     elif(len(subjectIndexes) == 1):
         subject = str(subjects[0])[:-1]
         proxy_label = nib.load(subject)
-        label_data = proxy_label.get_data()
+        label_data = np.array(proxy_label.get_data(),'float32')
         for i in xrange(0,len(voxelCoordinates)):
             D1,D2,D3 = voxelCoordinates[i]
             labels.append(label_data[D1-4:D1+5,D2-4:D2+5,D3-4:D3+5])
@@ -189,7 +189,7 @@ def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patc
             if debug: print('extracted [' + str(len(voxelCoordinates[i])) + '] patches from subject ' + str(i) +'/'+ str(len(subjectIndexes)) +  ' with index [' + str(subjectIndexes[i]) + ']')
         return vol
     elif(len(subjectIndexes) == 1):
-        print("only subject " + str(subjects))
+        #print("only subject " + str(subjects))
         subject = str(subjects[0])[:-1]
         proxy_img = nib.load(subject)
         img_data = proxy_img.get_data()
@@ -351,9 +351,6 @@ def ytrue(y_true, y_pred):
 def ypred(y_true, y_pred):
     return(y_pred)
     
-from sklearn.metrics import fbeta_score
-from keras import backend as K
-
 
 def fbeta(y_true, y_pred, threshold_shift=0):
     beta = 2
@@ -399,7 +396,7 @@ def FP(y_true, y_pred, threshold_shift=0):
     fp = K.sum(K.round(K.clip(y_pred_bin - y_true, 0, 1)), axis=1)
     return(fp)
     
-def sampleTestData(testChannels, testLabels, subjectIndex, groundTruthChannel_list, output_classes, dpatch):
+def sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatch):
     "output should be a batch containing all (non-overlapping) image patches of the whole head, and the labels"
     "Actually something like sampleTraindata, thereby inputting extractImagePatch with all voxels of a subject"
     "Voxel coordinates start at index [26] and then increase by 17 in all dimensions."    
@@ -428,7 +425,7 @@ def sampleTestData(testChannels, testLabels, subjectIndex, groundTruthChannel_li
     for i in xrange(0,len(testChannels)):
         patches[:,:,:,:,i] = extractImagePatch(testChannels[i], subjectIndex, patches, voxelCoordinates, n_patches, dpatch, debug=False)
              
-    labels = np.array(extractLabels(groundTruthChannel_list, subjectIndex, voxelCoordinates, dpatch))
+    labels = np.array(extractLabels(testLabels, subjectIndex, voxelCoordinates, dpatch))
     labels = to_categorical(labels.astype(int),output_classes)
     #print("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s")
     return patches, labels, voxelCoordinates, shape, affine
@@ -444,12 +441,11 @@ def classesInSample(labels, output_classes):
 
 
 
-def fullHeadSegmentation(testChannels, testLabels, subjectIndex, groundTruthChannel_list, output_classes, dpatch, size_minibatches, saveSegmentation = False):    
+def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches, saveSegmentation = False):    
     print("######################################################")
     print("Full head segmentation")
     print("######################################################")
     subjectIndex = [subjectIndex]
-
     test_performance = []
     accuracy = []
     f1 = []
@@ -457,7 +453,7 @@ def fullHeadSegmentation(testChannels, testLabels, subjectIndex, groundTruthChan
     coverage = []
     label_ranking_loss = []
     
-    batch, labels, voxelCoordinates, shape, affine = sampleTestData(testChannels, testLabels, subjectIndex, groundTruthChannel_list, output_classes, dpatch)
+    batch, labels, voxelCoordinates, shape, affine = sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatch)
     print("Extracted image patches for full head segmentation")
     
     start = 0
