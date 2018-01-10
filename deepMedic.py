@@ -11,6 +11,7 @@ import time
 from model import DeepMedic
 from helpers import sampleTrainData, fullHeadSegmentation, my_logger
 from random import shuffle
+import matplotlib
 
 
 os.chdir('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/')
@@ -88,19 +89,20 @@ dpatch=51
 L2 = 0
 
 # TRAIN PARAMETERS
-num_iter = 3
+num_iter = 1
 epochs = 10
-n_patches = 500
-n_patches_val = 500
-n_subjects = 20
+n_patches = 100
+n_patches_val = 100
+n_subjects = 5
 samplingMethod = 1
-size_minibatches = 1
+size_minibatches = 50
 
 
 # TEST PARAMETERS
-list_subjects_fullSegmentation = [0]
+list_subjects_fullSegmentation = [0,1]
 epochs_for_fullSegmentation = [1,3,6,9]
 size_test_minibatches = 200
+saveSegmentation = True
 
 load_model = False
 
@@ -134,7 +136,7 @@ my_logger(testLabels, logfile)
 my_logger('Session parameters: ', logfile)
 my_logger('[num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod, size_minibatches, list_subjects_fullSegmentation, epochs_for_fullSegmentation, size_test_minibatches]', logfile)
 my_logger([num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod, size_minibatches, list_subjects_fullSegmentation, epochs_for_fullSegmentation, size_test_minibatches], logfile)
-
+my_logger('Save full head segmentation of subjects: ' + str(saveSegmentation), logfile)
 
 for epoch in xrange(0,epochs):
     my_logger("######################################################",logfile)
@@ -188,10 +190,14 @@ for epoch in xrange(0,epochs):
         l = l+1
     my_logger('Total training this epoch took ' + str(round(time.time()-t1,2)) + ' seconds',logfile)
     if epoch in epochs_for_fullSegmentation:
+        my_logger("------------------------------------------------------", logfile)
+        my_logger("                 FULL HEAD SEGMENTATION", logfile)
+        my_logger("------------------------------------------------------", logfile)
         test_performance = []
         for subjectIndex in list_subjects_fullSegmentation:
-            fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, logfile, saveSegmentation = False)
-        
+            fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, logfile, saveSegmentation)
+        #my_logger('--------------- TEST EVALUATION ---------------', logfile)
+        #my_logger(np.average(test_performance,axis=0),logfile)
 #https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model
 #from keras.models import load_model     
 #model.save('Brats15_model2.h5')
@@ -235,5 +241,4 @@ plt.ylabel('accuracy')
 plt.axis('tight')
 plt.legend(('train set', 'validation set'))
 
-
-
+matplotlib.pyplot.savefig(logfile + '_Training.png')

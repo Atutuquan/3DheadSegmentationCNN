@@ -443,11 +443,9 @@ def classesInSample(labels, output_classes):
 
 
 def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, saveSegmentation = False):    
-    my_logger("------------------------------------------------------", logfile)
-    my_logger("                 Full head segmentation", logfile)
-    my_logger("------------------------------------------------------", logfile)
+
     subjectIndex = [subjectIndex]
-    test_performance = []
+    
     accuracy = []
     f1 = []
     auc_roc = []
@@ -469,7 +467,7 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
         prediction = model.predict(miniTestbatch, verbose=0)
         class_pred = np.argmax(prediction, axis=4)
         indexes.extend(class_pred)        
-        test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=0))
+        #test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=0))
         acc_score, f1_score, roc_score, coverage_score, label_ranking_loss_score =  evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels )
         accuracy.append(acc_score)
         f1.append(f1_score)
@@ -485,7 +483,7 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     prediction = model.predict(miniTestbatch, verbose=0)
     class_pred = np.argmax(prediction, axis=4)
     indexes.extend(class_pred)            
-    test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=0))
+    #test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=0))
     acc_score, f1_score, roc_score, coverage_score, label_ranking_loss_score =  evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels )
     accuracy.append(acc_score)
     f1.append(f1_score)
@@ -497,7 +495,7 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     mean_DICE = np.average(f1, axis=0)
     mean_AUC_ROC = np.average(auc_roc, axis=0)
     
-    my_logger('               FULL SEGMENTATION EVALUATION', logfile)
+    my_logger('          Full segmentation evaluation of subject', logfile)
     my_logger('Mean Accuracy :         ' + str(np.round(mean_accuracy,4)), logfile)
     my_logger('Mean DICE per class :   ' + str(np.round(mean_DICE,4)), logfile)
     my_logger('Mean AUC ROC per class: ' + str(np.round(mean_AUC_ROC, 4)), logfile)
@@ -514,7 +512,8 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
             #print(x,y,z)
     
         img = nib.Nifti1Image(head, affine)
-        nib.save(img, os.path.join('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/' + 'subjectNameString' +'fullHeadSegmentation.nii.gz'))
+        nib.save(img, os.path.join('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '.nii.gz'))
+        my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '.nii.gz', logfile)
     #p = p+1
     #print(subjectIndex)
     # print(test_performance[-1])
@@ -522,7 +521,7 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     #print('Total egmentation on subject took seconds:')
     #print(round(time.time()-t1,2))
     
-    
+    return mean_accuracy, list(mean_DICE), list(mean_AUC_ROC)
 
 # calculate AUC as well as another metric
 
