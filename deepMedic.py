@@ -9,7 +9,7 @@ import os
 import matplotlib.pyplot as plt
 import time
 from model import DeepMedic
-from helpers import sampleTrainData, fullHeadSegmentation
+from helpers import sampleTrainData, fullHeadSegmentation, my_logger
 from random import shuffle
 
 
@@ -18,7 +18,7 @@ os.chdir('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/')
 ###################   parameters // replace with config files ########################
 
 
-dataset = 'ATLAS17'
+dataset = 'BRATS15'
 
 
 if dataset == 'BRATS15':
@@ -88,18 +88,18 @@ dpatch=51
 L2 = 0
 
 # TRAIN PARAMETERS
-num_iter = 1
+num_iter = 3
 epochs = 10
-n_patches = 10
-n_patches_val = 10
-n_subjects = 2
+n_patches = 500
+n_patches_val = 500
+n_subjects = 20
 samplingMethod = 1
 size_minibatches = 1
 
 
 # TEST PARAMETERS
 list_subjects_fullSegmentation = [0]
-epochs_for_fullSegmentation = [0,3,6,9]
+epochs_for_fullSegmentation = [1,3,6,9]
 size_test_minibatches = 200
 
 load_model = False
@@ -109,6 +109,7 @@ if load_model == False:
     dm = DeepMedic(dpatch, output_classes, num_channels, L2)
     model = dm.createModel()
     #plot_model(model, to_file='multichannel.png', show_shapes=True)
+
 
 ############################## train model ###########################################
 
@@ -121,10 +122,24 @@ val1_performance = []
 l = 0
 t1 = time.time()
 
+
+logfile = 'Output/logs/TrainSession' + dataset + '_DeepMedic' + time.strftime("%Y-%m-%d_%H%M")
+my_logger('#######################################  NEW TRAINING SESSION  #######################################', logfile)    
+my_logger(trainChannels, logfile)
+my_logger(trainLabels, logfile)
+my_logger(validationChannels, logfile)        
+my_logger(validationLabels, logfile)  
+my_logger(testChannels, logfile) 
+my_logger(testLabels, logfile) 
+my_logger('Session parameters: ', logfile)
+my_logger('[num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod, size_minibatches, list_subjects_fullSegmentation, epochs_for_fullSegmentation, size_test_minibatches]', logfile)
+my_logger([num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod, size_minibatches, list_subjects_fullSegmentation, epochs_for_fullSegmentation, size_test_minibatches], logfile)
+
+
 for epoch in xrange(0,epochs):
-    print("######################################################")
-    print("TRAINING EPOCH " + str(epoch) + "/" + str(epochs))
-    print("######################################################")
+    my_logger("######################################################",logfile)
+    my_logger("                   TRAINING EPOCH " + str(epoch) + "/" + str(epochs),logfile)
+    my_logger("######################################################",logfile)
 
     
     if(usingLoadedData):
@@ -138,12 +153,12 @@ for epoch in xrange(0,epochs):
     
         if(usingLoadedData == False):
             print("Extracting image patches for training")
-            batch, labels = sampleTrainData(trainChannels,trainLabels, n_patches, n_subjects, dpatch, output_classes, samplingMethod)
+            batch, labels = sampleTrainData(trainChannels,trainLabels, n_patches, n_subjects, dpatch, output_classes, samplingMethod, logfile)
             
             #print(classesInSample(labels, output_classes))
             
             print("Extracting image patches for Validation")
-            valbatch, vallabels = sampleTrainData(validationChannels, validationLabels, n_patches_val, n_subjects, dpatch, output_classes, samplingMethod)
+            valbatch, vallabels = sampleTrainData(validationChannels, validationLabels, n_patches_val, n_subjects, dpatch, output_classes, samplingMethod, logfile)
             #valbatch1, vallabels1 = sampleTrainData(validationChannels, validationLabels, n_patches_val1, n_subjects, dpatch, output_classes, samplingMethod=0)
             
         
@@ -167,15 +182,15 @@ for epoch in xrange(0,epochs):
             train_performance.append(model.train_on_batch(allBatches[k[i]], allLabels[k[i]]))#, class_weight = class_weight1)
             val_performance.append(model.evaluate(allValBatches[k[i]], allValLabels[k[i]]))
             
-        print(str(i) + '/' + str(num_iter))
-        print(train_performance[-1])
+        my_logger(str(i) + '/' + str(num_iter),logfile)
+        my_logger('Train cost and accuracy      ' + str(train_performance[-1]),logfile)
+        my_logger('Validation cost and accuracy ' + str(val_performance[-1]),logfile)
         l = l+1
-    print('Total training this epoch took seconds:')
-    print(round(time.time()-t1,2))
+    my_logger('Total training this epoch took ' + str(round(time.time()-t1,2)) + ' seconds',logfile)
     if epoch in epochs_for_fullSegmentation:
         test_performance = []
         for subjectIndex in list_subjects_fullSegmentation:
-            fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, saveSegmentation = False)
+            fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, logfile, saveSegmentation = False)
         
 #https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model
 #from keras.models import load_model     

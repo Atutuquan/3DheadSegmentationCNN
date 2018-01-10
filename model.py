@@ -114,7 +114,7 @@ class DeepMedic():
         x        = Dense(units = self.fc_features[2], activation = 'softmax', name = 'softmax')(x)
         
         model     = Model(inputs = mod1, outputs = x)
-        print_summary(model, positions=[.33, .6, .67,1])
+        #print_summary(model, positions=[.33, .6, .67,1])
                   
         model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
         

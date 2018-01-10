@@ -208,7 +208,7 @@ def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patc
         #if debug: print('extracted [' + str(len(voxelCoordinates[i])) + '] patches from subject ' + str(i) +'/'+ str(len(subjectIndexes)) +  ' with index [' + str(subjectIndexes[i]) + ']')
     return vol
 
-def sampleTrainData(channelsList, groundTruthChannel_list, n_patches, n_subjects, dpatch, output_classes, samplingMethod):
+def sampleTrainData(channelsList, groundTruthChannel_list, n_patches, n_subjects, dpatch, output_classes, samplingMethod, logfile):
     '''output is a batch containing n-patches and their labels'''
     '''main function, called in the training process'''  
     num_channels = len(channelsList)
@@ -228,7 +228,7 @@ def sampleTrainData(channelsList, groundTruthChannel_list, n_patches, n_subjects
     labels = np.array(extractLabels(groundTruthChannel_list, subjectIndexes, voxelCoordinates, dpatch))
     labels = to_categorical(labels.astype(int),output_classes)
     end = time.time()
-    print("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s")
+    my_logger("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s", logfile)
     return patches, labels
 
 def generateAllForegroundVoxels(groundTruthChannel_list, dpatch):
@@ -396,7 +396,7 @@ def FP(y_true, y_pred, threshold_shift=0):
     fp = K.sum(K.round(K.clip(y_pred_bin - y_true, 0, 1)), axis=1)
     return(fp)
     
-def sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatch):
+def sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatch,logfile):
     "output should be a batch containing all (non-overlapping) image patches of the whole head, and the labels"
     "Actually something like sampleTraindata, thereby inputting extractImagePatch with all voxels of a subject"
     "Voxel coordinates start at index [26] and then increase by 17 in all dimensions."    
@@ -404,6 +404,7 @@ def sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatc
     labelsFile = open(testLabels,"r")   
     ch = labelsFile.readlines()
     subjectGTchannel = ch[subjectIndex[0]][:-1]
+    my_logger('Segmenting subject with GT channel: ' + str(subjectGTchannel), logfile)
     labelsFile.close()      
     proxy_img = nib.load(subjectGTchannel)
     shape = proxy_img.shape
@@ -441,10 +442,10 @@ def classesInSample(labels, output_classes):
 
 
 
-def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches, saveSegmentation = False):    
-    print("######################################################")
-    print("Full head segmentation")
-    print("######################################################")
+def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, saveSegmentation = False):    
+    my_logger("------------------------------------------------------", logfile)
+    my_logger("                 Full head segmentation", logfile)
+    my_logger("------------------------------------------------------", logfile)
     subjectIndex = [subjectIndex]
     test_performance = []
     accuracy = []
@@ -453,7 +454,7 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     coverage = []
     label_ranking_loss = []
     
-    batch, labels, voxelCoordinates, shape, affine = sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatch)
+    batch, labels, voxelCoordinates, shape, affine = sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatch,logfile)
     print("Extracted image patches for full head segmentation")
     
     start = 0
@@ -465,10 +466,10 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
         miniTestbatch = batch[start:end,:,:,:,:]    
         miniTestbatch_labels = labels[start:end,:,:,:,:]    
         
-        prediction = model.predict(miniTestbatch)
+        prediction = model.predict(miniTestbatch, verbose=0)
         class_pred = np.argmax(prediction, axis=4)
         indexes.extend(class_pred)        
-        test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=1))
+        test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=0))
         acc_score, f1_score, roc_score, coverage_score, label_ranking_loss_score =  evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels )
         accuracy.append(acc_score)
         f1.append(f1_score)
@@ -481,10 +482,10 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     end = start + (len(voxelCoordinates)-n_minibatches*size_minibatches)
     miniTestbatch = batch[start:end,:,:,:,:]    
     miniTestbatch_labels = labels[start:end,:,:,:,:]    
-    prediction = model.predict(miniTestbatch)
+    prediction = model.predict(miniTestbatch, verbose=0)
     class_pred = np.argmax(prediction, axis=4)
     indexes.extend(class_pred)            
-    test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels))
+    test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=0))
     acc_score, f1_score, roc_score, coverage_score, label_ranking_loss_score =  evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels )
     accuracy.append(acc_score)
     f1.append(f1_score)
@@ -496,9 +497,10 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     mean_DICE = np.average(f1, axis=0)
     mean_AUC_ROC = np.average(auc_roc, axis=0)
     
-    print(np.round(mean_accuracy,4))
-    print(np.round(mean_DICE,4))
-    print(np.round(mean_AUC_ROC, 4))
+    my_logger('               FULL SEGMENTATION EVALUATION', logfile)
+    my_logger('Mean Accuracy :         ' + str(np.round(mean_accuracy,4)), logfile)
+    my_logger('Mean DICE per class :   ' + str(np.round(mean_DICE,4)), logfile)
+    my_logger('Mean AUC ROC per class: ' + str(np.round(mean_AUC_ROC, 4)), logfile)
     
     if(saveSegmentation):
     
@@ -591,3 +593,12 @@ def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
         #print('tmp_a: {0}'.format(tmp_a))
         acc_list.append(tmp_a)
     return np.mean(acc_list)
+
+
+def my_logger(string, logfile):
+    f = open(logfile,'a')
+    f.write('\n' + str(string))
+    f.close()
+    print(string)
+    
+    
