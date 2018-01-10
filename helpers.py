@@ -442,7 +442,7 @@ def classesInSample(labels, output_classes):
 
 
 
-def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, saveSegmentation = False):    
+def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, epoch, saveSegmentation = False):    
 
     subjectIndex = [subjectIndex]
     
@@ -512,8 +512,8 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
             #print(x,y,z)
     
         img = nib.Nifti1Image(head, affine)
-        nib.save(img, os.path.join('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '.nii.gz'))
-        my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '.nii.gz', logfile)
+        nib.save(img, os.path.join('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz'))
+        my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz', logfile)
     #p = p+1
     #print(subjectIndex)
     # print(test_performance[-1])

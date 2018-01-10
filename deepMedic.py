@@ -9,18 +9,19 @@ import os
 import matplotlib.pyplot as plt
 import time
 from model import DeepMedic
-from helpers import sampleTrainData, fullHeadSegmentation, my_logger
+from helpers import sampleTrainData, fullHeadSegmentation, my_logger, classesInSample
 from random import shuffle
 import matplotlib
+from keras.callbacks import ModelCheckpoint#, EarlyStopping, History
+
+from configFile import *   # Get all session parameters
+
+os.chdir(wd)
 
 
-os.chdir('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/')
+logfile = 'Output/logs/TrainSession' + dataset + '_DeepMedic' + time.strftime("%Y-%m-%d_%H%M")
 
-###################   parameters // replace with config files ########################
-
-
-dataset = 'BRATS15'
-
+# Load dataset
 
 if dataset == 'BRATS15':
     '''Example data BRATS 2015 - 4 input channels - 5 output classes'''
@@ -32,9 +33,9 @@ if dataset == 'BRATS15':
     trainLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainGT.cfg'
 
     validationChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valFlair.cfg',
-                               '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1.cfg',
-                               '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1c.cfg',
-                               '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT2.cfg']
+                          '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1.cfg',
+                          '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1c.cfg',
+                          '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT2.cfg']
     validationLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valGT.cfg'
     
     testChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testFlair.cfg',
@@ -59,12 +60,6 @@ elif dataset == 'ATLAS17':
     output_classes = 2 # Including background!!
     
     
-usingLoadedData = False
-allBatchesAddress = '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/allBatches.pkl'
-allLabelsAddress =  '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/allLabels.pkl'
-allValBatchesAddress = '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/allValBatches.pkl'
-allValLabelsAddress = '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/allValLabels.pkl'
-
 if(usingLoadedData):
     print("Loading collected data")
     import pickle
@@ -81,38 +76,24 @@ if(usingLoadedData):
         print(allValLabelsAddress)
         allValLabels = pickle.load(fp)
 
-# Parameters // this could be assigned in separate configuration files
-
-# MODEL PARAMETERS
-num_channels = len(trainChannels)
-dpatch=51
-L2 = 0
-
-# TRAIN PARAMETERS
-num_iter = 1
-epochs = 10
-n_patches = 100
-n_patches_val = 100
-n_subjects = 5
-samplingMethod = 1
-size_minibatches = 50
-
-
-# TEST PARAMETERS
-list_subjects_fullSegmentation = [0,1]
-epochs_for_fullSegmentation = [1,3,6,9]
-size_test_minibatches = 200
-saveSegmentation = True
-
-load_model = False
 
 ############################## create model ###########################################
+num_channels = len(trainChannels)
+        
 if load_model == False:
-    dm = DeepMedic(dpatch, output_classes, num_channels, L2)
+    dm = DeepMedic(dpatch, output_classes, num_channels, L2, dropout, learning_rate, optimizer_decay)
     model = dm.createModel()
+    print(model.summary())
     #plot_model(model, to_file='multichannel.png', show_shapes=True)
+    model_path = wd+'/Output/models/'+logfile[12:]+'.h5'
 
 
+
+elif load_model == True:
+    from keras.models import load_model  
+    model = load_model(path_to_model)
+    
+    
 ############################## train model ###########################################
 
 train_performance = []
@@ -125,7 +106,6 @@ l = 0
 t1 = time.time()
 
 
-logfile = 'Output/logs/TrainSession' + dataset + '_DeepMedic' + time.strftime("%Y-%m-%d_%H%M")
 my_logger('#######################################  NEW TRAINING SESSION  #######################################', logfile)    
 my_logger(trainChannels, logfile)
 my_logger(trainLabels, logfile)
@@ -136,7 +116,10 @@ my_logger(testLabels, logfile)
 my_logger('Session parameters: ', logfile)
 my_logger('[num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod, size_minibatches, list_subjects_fullSegmentation, epochs_for_fullSegmentation, size_test_minibatches]', logfile)
 my_logger([num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod, size_minibatches, list_subjects_fullSegmentation, epochs_for_fullSegmentation, size_test_minibatches], logfile)
+my_logger('Dropout for last two fully connected layers: ' + str(dropout), logfile)
 my_logger('Save full head segmentation of subjects: ' + str(saveSegmentation), logfile)
+if load_model:
+    my_logger("USING PREVIOUSLY SAVED MODEL -  Model retrieved from: " + path_to_model, logfile)
 
 for epoch in xrange(0,epochs):
     my_logger("######################################################",logfile)
@@ -149,30 +132,49 @@ for epoch in xrange(0,epochs):
         shuffle(k)
     
     for i in range(0, num_iter):
-    
-        #batch, labels = extractPatches(filename,labelsFileName, n_patches, n_subjects, dpatch, output_classes)
-        #valbatch, vallabels = extractPatches(valfilename, vallabelsfilename, n_patches, n_subjects, dpatch, output_classes)
-    
-        if(usingLoadedData == False):
-            print("Extracting image patches for training")
+        
+        if(usingLoadedData):
+            train_performance.append(model.train_on_batch(allBatches[k[i]], allLabels[k[i]]))#, class_weight = class_weight1)
+            val_performance.append(model.evaluate(allValBatches[k[i]], allValLabels[k[i]]))
+            
+        else:
             batch, labels = sampleTrainData(trainChannels,trainLabels, n_patches, n_subjects, dpatch, output_classes, samplingMethod, logfile)
             
-            #print(classesInSample(labels, output_classes))
+            my_logger("Sampled following number of classes in training batch: " + str(classesInSample(labels, output_classes)), logfile)
             
-            print("Extracting image patches for Validation")
-            valbatch, vallabels = sampleTrainData(validationChannels, validationLabels, n_patches_val, n_subjects, dpatch, output_classes, samplingMethod, logfile)
+            valbatch, vallabels = sampleTrainData(validationChannels, validationLabels, n_patches_val, n_subjects_val, dpatch, output_classes, samplingMethod, logfile)
             #valbatch1, vallabels1 = sampleTrainData(validationChannels, validationLabels, n_patches_val1, n_subjects, dpatch, output_classes, samplingMethod=0)
             
         
         # A batch is too big, divide in mini-batches 
+        #TRAINING ON BATCHES
             start = 0
             n_minibatches = len(batch)/size_minibatches
             for j in range(0,n_minibatches):
-                #print("training on minibatch " +str(j)+ "/" + str(n_minibatches))
+                print("training on minibatch " +str(j)+ "/" + str(n_minibatches))
                 end = start + size_minibatches
                 minibatch = batch[start:end,:,:,:,:]    
                 minibatch_labels = labels[start:end,:,:,:,:]    
                 train_performance.append(model.train_on_batch(minibatch, minibatch_labels))#, class_weight = class_weight))
+                #minivalbatch = valbatch[start:end,:,:,:,:]    
+                #minivalbatch_labels = vallabels[start:end,:,:,:,:]    
+                #val_performance.append(model.evaluate(minivalbatch, minivalbatch_labels))
+                #minivalbatch1 = valbatch1[start:end,:,:,:,:]    
+                #minivalbatch_labels1 = vallabels1[start:end,:,:,:,:]  
+                #val1_performance.append(model.evaluate(minivalbatch1, minivalbatch_labels1))
+                start = end
+            my_logger(str(i) + '/' + str(num_iter),logfile)
+            my_logger('Train cost and accuracy      ' + str(train_performance[-1]),logfile)
+                
+            # VALIDATION ON BATCHES
+            start = 0
+            n_minibatches = len(valbatch)/size_minibatches
+            for j in range(0,n_minibatches):
+                print("validation on minibatch " +str(j)+ "/" + str(n_minibatches))
+                end = start + size_minibatches
+                #minibatch = batch[start:end,:,:,:,:]    
+                #minibatch_labels = labels[start:end,:,:,:,:]    
+                #train_performance.append(model.train_on_batch(minibatch, minibatch_labels))#, class_weight = class_weight))
                 minivalbatch = valbatch[start:end,:,:,:,:]    
                 minivalbatch_labels = vallabels[start:end,:,:,:,:]    
                 val_performance.append(model.evaluate(minivalbatch, minivalbatch_labels))
@@ -180,13 +182,7 @@ for epoch in xrange(0,epochs):
                 #minivalbatch_labels1 = vallabels1[start:end,:,:,:,:]  
                 #val1_performance.append(model.evaluate(minivalbatch1, minivalbatch_labels1))
                 start = end
-        else:
-            train_performance.append(model.train_on_batch(allBatches[k[i]], allLabels[k[i]]))#, class_weight = class_weight1)
-            val_performance.append(model.evaluate(allValBatches[k[i]], allValLabels[k[i]]))
-            
-        my_logger(str(i) + '/' + str(num_iter),logfile)
-        my_logger('Train cost and accuracy      ' + str(train_performance[-1]),logfile)
-        my_logger('Validation cost and accuracy ' + str(val_performance[-1]),logfile)
+            my_logger('Validation cost and accuracy ' + str(val_performance[-1]),logfile)
         l = l+1
     my_logger('Total training this epoch took ' + str(round(time.time()-t1,2)) + ' seconds',logfile)
     if epoch in epochs_for_fullSegmentation:
@@ -195,21 +191,19 @@ for epoch in xrange(0,epochs):
         my_logger("------------------------------------------------------", logfile)
         test_performance = []
         for subjectIndex in list_subjects_fullSegmentation:
-            fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, logfile, saveSegmentation)
+            fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, logfile,epoch, saveSegmentation)
         #my_logger('--------------- TEST EVALUATION ---------------', logfile)
         #my_logger(np.average(test_performance,axis=0),logfile)
 #https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model
-#from keras.models import load_model     
-#model.save('Brats15_model2.h5')
-#model.save_weights('Brats15_model2_weights.h5')
-#model = load_model('Brats15_model2.h5')
-#json_string = model.to_json()
 
-#model = model_from_json(open(modelFile).read())
-#model.load_weights(os.path.join(os.path.dirname(modelFile), 'model_weights.h5'))
 
-#If you only need to save the architecture of a model, and not its weights or its training configuration, you can do:
-#json_string = model.to_json()
+# SAVING AND LOADING A MODEL. Works fine when not using non-standard keras library metrics (e.g. dice)
+my_logger('###### SAVING TRAINED MODEL AT : ' + wd+'/Output/models/'+logfile[12:]+'.h5', logfile)
+model.save(wd+'/Output/models/'+logfile[12:]+'.h5')
+#model.save_weights(wd+'/Output/models/'+logfile[12:]+'_weights_.h5')
+
+
+
 #%%############################# plot ##################################################
 
 plt.clf()

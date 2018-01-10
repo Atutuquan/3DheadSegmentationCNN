@@ -19,12 +19,13 @@ from keras.layers import UpSampling3D
 from keras.layers import concatenate
 from keras.utils import print_summary
 from keras import regularizers
+from keras.optimizers import RMSprop
 
 
 
 class DeepMedic():
     
-    def __init__(self, dpatch, output_classes, num_channels, L2):
+    def __init__(self, dpatch, output_classes, num_channels, L2, dropout, learning_rate, optimizer_decay):
         
         self.dpatch = dpatch
         self.output_classes = output_classes
@@ -33,6 +34,9 @@ class DeepMedic():
         self.d_factor = 3  # downsampling factor = stride in downsampling pathway
         self.num_channels = num_channels
         self.L2 = L2
+        self.dropout = dropout
+        self.learning_rate = learning_rate
+        self.optimizer_decay = optimizer_decay
         #self.w_initializer=w_initializer, # initialization of layer parameters? Needed here?
         #self.w_regularizer=w_regularizer,
         #self.b_initializer=b_initializer, # initialization of bias parameters? Needed here?
@@ -104,18 +108,22 @@ class DeepMedic():
                            kernel_regularizer=regularizers.l2(self.L2))(x)
         x        = BatchNormalization()(x)
         x        = Activation('relu')(x)
+        #x        = Dropout(rate = self.dropout[0])(x)
         x        = Conv3D(filters = self.fc_features[1], 
                            kernel_size = (1,1,1), 
                            kernel_initializer=he_normal(seed=seed),
                            kernel_regularizer=regularizers.l2(self.L2))(x)
         x        = BatchNormalization()(x)
         x        = Activation('relu')(x)
+        #x        = Dropout(rate = self.dropout[1])(x)
         #x        = Flatten()(x)
         x        = Dense(units = self.fc_features[2], activation = 'softmax', name = 'softmax')(x)
         
         model     = Model(inputs = mod1, outputs = x)
         #print_summary(model, positions=[.33, .6, .67,1])
                   
+        #rmsprop = RMSprop(lr=self.learning_rate, rho=0.9, epsilon=None, decay=self.optimizer_decay)
+        
         model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
         
         return model
