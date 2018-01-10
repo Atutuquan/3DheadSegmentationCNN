@@ -24,17 +24,17 @@ dataset = 'ATLAS17'
 if dataset == 'BRATS15':
     '''Example data BRATS 2015 - 4 input channels - 5 output classes'''
     
-    channelsList = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainFlair.cfg',
+    trainChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainFlair.cfg',
                     '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1.cfg',
                     '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1c.cfg',
                     '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT2.cfg']
-    groundTruthChannel_list = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainGT.cfg'
+    trainLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainGT.cfg'
 
-    channelsList_validation = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valFlair.cfg',
+    validationChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valFlair.cfg',
                                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1.cfg',
                                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1c.cfg',
                                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT2.cfg']
-    groundTruthChannel_list_validation = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valGT.cfg'
+    validationLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valGT.cfg'
     
     testChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testFlair.cfg',
                     '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testT1.cfg',
@@ -46,11 +46,11 @@ if dataset == 'BRATS15':
 elif dataset == 'ATLAS17':
     '''Example data ATLAS 2017 - 1 input channel - 2 output classes'''
     
-    channelsList = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/splits1/ChannelsTrain_splits1.cfg']
-    groundTruthChannel_list = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/splits1/SegmentsTrain_splits1.cfg'
+    trainChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/splits1/ChannelsTrain_splits1.cfg']
+    trainLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/splits1/SegmentsTrain_splits1.cfg'
     
-    channelsList_validation = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/validation/splits1/ChannelsVal_splits1.cfg']
-    groundTruthChannel_list_validation = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/validation/splits1/SegmentsVal_splits1.cfg'
+    validationChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/validation/splits1/ChannelsVal_splits1.cfg']
+    validationLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/validation/splits1/SegmentsVal_splits1.cfg'
 
     testChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/test/splits1/ChannelsTest_splits1.cfg']
     testLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/test/splits1/SegmentsTest_splits1.cfg'
@@ -83,7 +83,7 @@ if(usingLoadedData):
 # Parameters // this could be assigned in separate configuration files
 
 # MODEL PARAMETERS
-num_channels = len(channelsList)
+num_channels = len(trainChannels)
 dpatch=51
 L2 = 0
 
@@ -116,7 +116,7 @@ train_performance = []
 val_performance = []
 val1_performance = []
 
-#allForegroundVoxels = generateAllForegroundVoxels(groundTruthChannel_list, dpatch)
+#allForegroundVoxels = generateAllForegroundVoxels(trainLabels, dpatch)
 
 l = 0
 t1 = time.time()
@@ -138,13 +138,13 @@ for epoch in xrange(0,epochs):
     
         if(usingLoadedData == False):
             print("Extracting image patches for training")
-            batch, labels = sampleTrainData(channelsList, groundTruthChannel_list, n_patches, n_subjects, dpatch, output_classes, samplingMethod)
+            batch, labels = sampleTrainData(trainChannels,trainLabels, n_patches, n_subjects, dpatch, output_classes, samplingMethod)
             
             #print(classesInSample(labels, output_classes))
             
             print("Extracting image patches for Validation")
-            valbatch, vallabels = sampleTrainData(channelsList_validation, groundTruthChannel_list_validation, n_patches_val, n_subjects, dpatch, output_classes, samplingMethod)
-            #valbatch1, vallabels1 = sampleTrainData(channelsList_validation, groundTruthChannel_list_validation, n_patches_val1, n_subjects, dpatch, output_classes, samplingMethod=0)
+            valbatch, vallabels = sampleTrainData(validationChannels, validationLabels, n_patches_val, n_subjects, dpatch, output_classes, samplingMethod)
+            #valbatch1, vallabels1 = sampleTrainData(validationChannels, validationLabels, n_patches_val1, n_subjects, dpatch, output_classes, samplingMethod=0)
             
         
         # A batch is too big, divide in mini-batches 
@@ -192,7 +192,7 @@ for epoch in xrange(0,epochs):
 #%%############################# plot ##################################################
 
 plt.clf()
-plt.subplot(311)
+plt.subplot(211)
 ax = plt.gca()
 t0 = [row[0] for row in train_performance]
 v0 = [row[0] for row in val_performance]
@@ -208,7 +208,7 @@ plt.xlabel('epochs')
 plt.ylabel('loss')
 plt.axis('tight')
 plt.legend(('train set', 'validation set','uniform sample validation set'))
-plt.subplot(312)
+plt.subplot(212)
 ax = plt.gca()
 t1 = [row[1] for row in train_performance]
 v1 = [row[1] for row in val_performance]
@@ -219,17 +219,6 @@ plt.xlabel('epochs')
 plt.ylabel('accuracy')
 plt.axis('tight')
 plt.legend(('train set', 'validation set'))
-plt.subplot(313)
-ax = plt.gca()
-t2 = [row[2] for row in train_performance]
-v2 = [row[2] for row in val_performance]
-#v02 = [row[2] for row in val1_performance]
-plt.plot(range(0,len(t2)),t2,'-',v2)#,'-',v02,'-')
-#ax.plot( np.concatenate((train_performance[:,[1]], val_performance[:,[1]]),1))
-plt.xlabel('epochs')
-plt.ylabel('F1')
-plt.axis('tight')
-plt.legend(('train set', 'validation set'))
-plt.show()
+
 
 
