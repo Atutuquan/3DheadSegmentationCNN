@@ -13,6 +13,7 @@ from keras.utils import to_categorical
 import random
 import os
 from sklearn import metrics
+import matplotlib.pyplot as plt
 
 def file_len(fname):
     with open(fname) as f:
@@ -443,9 +444,7 @@ def classesInSample(labels, output_classes):
 
 
 def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, epoch, saveSegmentation = False):    
-
     subjectIndex = [subjectIndex]
-    
     accuracy = []
     f1 = []
     auc_roc = []
@@ -512,8 +511,8 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
             #print(x,y,z)
     
         img = nib.Nifti1Image(head, affine)
-        nib.save(img, os.path.join('/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz'))
-        my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/headSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz', logfile)
+        nib.save(img, os.path.join('/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz'))
+        my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz', logfile)
     #p = p+1
     #print(subjectIndex)
     # print(test_performance[-1])
@@ -532,6 +531,7 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
 def evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels ):
 
     # Add classes to fullfill requisites for F1 
+    tmp = list(class_pred[-1][-1][-1][0:output_classes]) # store original values
     class_pred[-1][-1][-1][0:output_classes] = [u for u in range(output_classes)]
     newlist = [u for u in class_pred for u in u]
     newlist = [u for u in newlist for u in u]
@@ -548,12 +548,11 @@ def evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_lab
     
     # if normalize = True, same as hamming_score. Just a summarized accuracy for all labels.
     acc = metrics.accuracy_score(y_true, y_pred, normalize=True, sample_weight=None)
-    
-    
     f1 = metrics.f1_score(y_true, y_pred, labels=[u for u in range(output_classes)], average=None, sample_weight=None)
     
     # add one class to be able to compute AUC ROC
-    y_true[-output_classes:len(y_true)] = [u for u in range(output_classes)]
+
+    y_true[-output_classes:len(y_true)] = [u for u in range(output_classes)] # replace with classes.
     
     newlist = [u for u in prediction for u in u]
     newlist = [u for u in newlist for u in u]
@@ -567,6 +566,9 @@ def evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_lab
     
     coverage = metrics.coverage_error(y_true, y_score, sample_weight=None)
     label_ranking_loss = metrics.label_ranking_loss(y_true, y_score, sample_weight=None)
+    
+    # restore to original values, to avoid weird grid patterns in segmentation output. As this alterns globally the outout.
+    class_pred[-1][-1][-1][0:output_classes] = tmp
 
     return acc, f1, roc, coverage, label_ranking_loss
 
@@ -600,4 +602,58 @@ def my_logger(string, logfile):
     f.close()
     print(string)
     
+def movingAverageConv(a, window_size=1) :
+    if not a : return a
+    window = np.ones(int(window_size))
+    result = np.convolve(a, window, 'full')[ : len(a)] # Convolve full returns array of shape ( M + N - 1 ).
+    slotsWithIncompleteConvolution = min(len(a), window_size-1)
+    result[slotsWithIncompleteConvolution:] = result[slotsWithIncompleteConvolution:]/float(window_size)
+    if slotsWithIncompleteConvolution > 1 :
+        divisorArr = np.asarray(range(1, slotsWithIncompleteConvolution+1, 1), dtype=float)
+        result[ : slotsWithIncompleteConvolution] = result[ : slotsWithIncompleteConvolution] / divisorArr
+    return result
+
+def plotTraining(train_performance, val_performance, window_size=1, savePlot=False):
+    import matplotlib.pyplot as plt
+    plt.clf()
+    plt.subplot(211)
+    ax = plt.gca()
+
+    t0 = [row[0] for row in train_performance]
+    v0 = [row[0] for row in val_performance]
     
+    t0 = movingAverageConv(t0, window_size)
+    v0 = movingAverageConv(v0, window_size)
+    
+    plt.plot(range(len(t0)),t0,'b-')
+    plt.plot(range(0,len(t0),(len(t0)/len(v0))),v0,'r-')
+    plt.show()
+    
+    
+    #plt.plot(range(0,len(t0)),t0,'-',v0)#,'-',vl01,'-')
+    #ax.plot( np.concatenate((train_performance[:,[0]], val_performance[:,[0]]),1))
+    plt.xlabel('weight updates')
+    plt.ylabel('loss')
+    plt.axis('tight')
+    plt.legend(('train set', 'validation set','uniform sample validation set'))
+    plt.subplot(212)
+    ax = plt.gca()
+    t1 = [row[1] for row in train_performance]
+    v1 = [row[1] for row in val_performance]
+    #v01 = [row[1] for row in val1_performance]
+    
+    t1 = movingAverageConv(t1, window_size)
+    v1 = movingAverageConv(v1, window_size)
+    
+    plt.plot(range(len(t1)),t1,'b-')
+    plt.plot(range(0,len(t1),(len(t1)/len(v1))),v1,'r-')
+    plt.show()
+    
+    #plt.plot(range(0,len(t1)),t1,'-',v1)#,'-',v01,'-')
+    #ax.plot( np.concatenate((train_performance[:,[1]], val_performance[:,[1]]),1))
+    plt.xlabel('weight updates')
+    plt.ylabel('accuracy')
+    plt.axis('tight')
+    plt.legend(('train set', 'validation set'))
+    if savePlot:
+        matplotlib.pyplot.savefig(logfile + '_Training.png')
