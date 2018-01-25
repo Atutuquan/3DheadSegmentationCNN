@@ -1,0 +1,41 @@
+
+#######################################  NEW TRAINING SESSION  #######################################
+['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainFlair.cfg', '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1.cfg', '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1c.cfg', '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT2.cfg']
+/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainGT.cfg
+['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valFlair.cfg', '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1.cfg', '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1c.cfg', '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT2.cfg']
+/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valGT.cfg
+['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testFlair.cfg', '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testT1.cfg', '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testT1c.cfg', '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testT2.cfg']
+/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testGT.cfg
+Session parameters: 
+[num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod, size_minibatches, list_subjects_fullSegmentation, epochs_for_fullSegmentation, size_test_minibatches]
+[30, 10, 1000, 50, 25, 1, 100, [0, 5], [5, 9], 200]
+Dropout for last two fully connected layers: [0, 0]
+Model loss function: categorical_crossentropy
+Model number of parameters: 665035
+Optimizer used: <bound method type.from_config of <class 'keras.optimizers.Adam'>>
+Optimizer parameters: {'beta_1': 0.8999999761581421, 'epsilon': 1e-08, 'beta_2': 0.9990000128746033, 'lr': 0.0010000000474974513, 'decay': 0.0}
+Save full head segmentation of subjects: True
+USING PREVIOUSLY SAVED MODEL -  Model retrieved from: /home/lukas/Documents/projects/brainSegmentation/deepMedicKeras//Output/models/TrainSessionBRATS15_DeepMedic2018-01-24_1252.h5
+######################################################
+                   TRAINING EPOCH 0/10
+######################################################
+Finished extracting 50 patches, from 10 subjects and 4 channels. Timing: 5.27s
+Validation cost and accuracy [0.74357382535934446, 0.72068586826324466]
+Finished extracting 1000 patches, from 25 subjects and 4 channels. Timing: 13.73s
+Sampled following number of classes in training batch: [423703, 18131, 177868, 45798, 63500]
+Train cost and accuracy      [0.84429199, 0.63219482]
+Train cost and accuracy      [0.45737514, 0.8220439]
+Train cost and accuracy      [0.81735945, 0.70832646]
+Train cost and accuracy      [0.53890556, 0.81120712]
+Train cost and accuracy      [0.70350349, 0.70157748]
+Train cost and accuracy      [0.45203251, 0.81883401]
+Train cost and accuracy      [0.67201722, 0.72379971]
+Train cost and accuracy      [0.58183336, 0.72530866]
+Train cost and accuracy      [0.5336073, 0.81636488]
+Train cost and accuracy      [0.48261917, 0.84956104]
+Finished extracting 50 patches, from 10 subjects and 4 channels. Timing: 5.18s
+Validation cost and accuracy [0.77360872030258176, 0.6520987558364868]
+Finished extracting 1000 patches, from 25 subjects and 4 channels. Timing: 13.91s
+Sampled following number of classes in training batch: [418614, 9241, 170945, 31540, 98660]
+Train cost and accuracy      [0.83529502, 0.68768173]
+Train cost and accuracy      [0.74733186, 0.7351166]

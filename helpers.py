@@ -67,6 +67,8 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
                 voxelIndexesSubj.append((np.random.randint(0+dpatch/2, shapes[i][0]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][1]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][2]-(dpatch/2)-1)))
                 
             allVoxelIndexes.append(voxelIndexesSubj)
+            
+        random.shuffle(allVoxelIndexes[0])
         return allVoxelIndexes
     
     elif samplingMethod == 1:
@@ -91,6 +93,7 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
 
             #backgroundVoxels = bg[random.sample(xrange(0,len(bg)), patches_per_subject[i]/2)].tolist()
             allVoxelIndexes.append(foregroundVoxels + backgroundVoxels)
+            random.shuffle(allVoxelIndexes[0])
         return allVoxelIndexes
     
     #samplingMethod 2 : include foreground Voxels in arguments for this option. These were poped from the total list. Then generate background voxels just like for method 1
@@ -149,8 +152,8 @@ def extractLabels(groundTruthChannel_list, subjectIndexes, voxelCoordinates, dpa
         subject = str(subjects[0])[:-1]
         proxy_label = nib.load(subject)
         label_data = np.array(proxy_label.get_data(),'float32')
-        for i in xrange(0,len(voxelCoordinates)):
-            D1,D2,D3 = voxelCoordinates[i]
+        for i in xrange(0,len(voxelCoordinates[0])):
+            D1,D2,D3 = voxelCoordinates[0][i]
             labels.append(label_data[D1-4:D1+5,D2-4:D2+5,D3-4:D3+5])
             #print("Extracted labels " + str(i))
         proxy_label.uncache()
@@ -194,10 +197,10 @@ def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patc
         subject = str(subjects[0])[:-1]
         proxy_img = nib.load(subject)
         img_data = proxy_img.get_data()
-        for i in xrange(0,len(voxelCoordinates)):
+        for i in xrange(0,len(voxelCoordinates[0])):
             
             
-            D1,D2,D3 = voxelCoordinates[i]        
+            D1,D2,D3 = voxelCoordinates[0][i]        
             #print(i,j)
             #print(D1,D2,D3)
             vol[k,:,:,:] = img_data[D1-(dpatch/2):D1+(dpatch/2)+1,D2-(dpatch/2):D2+(dpatch/2)+1,D3-(dpatch/2):D3+(dpatch/2)+1]  # at some point change this to be the central voxel. And change how the voxels are sampled (does not need to subtract the dpatch size)
@@ -425,9 +428,9 @@ def sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatc
     patches = np.zeros((n_patches,dpatch,dpatch,dpatch,num_channels),dtype='int8')
     
     for i in xrange(0,len(testChannels)):
-        patches[:,:,:,:,i] = extractImagePatch(testChannels[i], subjectIndex, patches, voxelCoordinates, n_patches, dpatch, debug=False)
+        patches[:,:,:,:,i] = extractImagePatch(testChannels[i], subjectIndex, patches, [voxelCoordinates], n_patches, dpatch, debug=False)
              
-    labels = np.array(extractLabels(testLabels, subjectIndex, voxelCoordinates, dpatch))
+    labels = np.array(extractLabels(testLabels, subjectIndex, [voxelCoordinates], dpatch))
     labels = to_categorical(labels.astype(int),output_classes)
     #print("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s")
     return patches, labels, voxelCoordinates, shape, affine
@@ -626,7 +629,8 @@ def plotTraining(train_performance, val_performance, window_size=1, savePlot=Fal
     v0 = movingAverageConv(v0, window_size)
     
     plt.plot(range(len(t0)),t0,'b-')
-    plt.plot(range(0,len(t0),(len(t0)/len(v0))),v0,'r-')
+    #plt.plot(range(0,len(t0),(len(t0)/len(v0))),v0,'r-')
+    plt.plot(range(0,len(t0),(len(t0)/len(v0))+2),v0,'r-')
     plt.show()
     
     
@@ -646,7 +650,8 @@ def plotTraining(train_performance, val_performance, window_size=1, savePlot=Fal
     v1 = movingAverageConv(v1, window_size)
     
     plt.plot(range(len(t1)),t1,'b-')
-    plt.plot(range(0,len(t1),(len(t1)/len(v1))),v1,'r-')
+    #plt.plot(range(0,len(t1),(len(t1)/len(v1))),v1,'r-')
+    plt.plot(range(0,len(t1),(len(t1)/len(v1))+2),v1,'r-')
     plt.show()
     
     #plt.plot(range(0,len(t1)),t1,'-',v1)#,'-',v01,'-')

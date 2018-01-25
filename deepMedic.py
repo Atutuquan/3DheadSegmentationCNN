@@ -6,22 +6,18 @@ Created on Wed Dec  6 13:58:48 2017
 @author: lukas
 """
 import os
-
 import time
 from model import DeepMedic
 from helpers import sampleTrainData, fullHeadSegmentation, my_logger, classesInSample, plotTraining
 from random import shuffle
-
 from keras.callbacks import ModelCheckpoint#, EarlyStopping, History
 import numpy as np
 from configFile import *   # Get all session parameters
 
 os.chdir(wd)
-
-
 logfile = 'Output/logs/TrainSession' + dataset + '_DeepMedic' + time.strftime("%Y-%m-%d_%H%M")
 
-# Load dataset
+############################## Load dataset #############################
 
 if dataset == 'BRATS15':
     '''Example data BRATS 2015 - 4 input channels - 5 output classes'''
@@ -90,27 +86,26 @@ if load_model == False:
     dm = DeepMedic(dpatch, output_classes, num_channels, L2, dropout, learning_rate, optimizer_decay)
     model = dm.createModel()
     print(model.summary())
+    train_performance = []
+    val_performance = []
     #plot_model(model, to_file='multichannel.png', show_shapes=True)
     model_path = wd+'/Output/models/'+logfile[12:]+'.h5'
-
-
-
 elif load_model == True:
     from keras.models import load_model  
     model = load_model(path_to_model)
+    logfile = 'Output/logs/'  + logfile_model
     
     
 ############################## train model ###########################################
 
-train_performance = []
-val_performance = []
+# OUTCOMMENTED SO I CAN KEEP USING SAME TRAINING DATA FOR SAME MODEL.
+#train_performance = []
+#val_performance = []
+
 
 
 #allForegroundVoxels = generateAllForegroundVoxels(trainLabels, dpatch)
-
 l = 0
-t1 = time.time()
-
 
 my_logger('#######################################  NEW TRAINING SESSION  #######################################', logfile)    
 my_logger(trainChannels, logfile)
@@ -132,10 +127,11 @@ if load_model:
     my_logger("USING PREVIOUSLY SAVED MODEL -  Model retrieved from: " + path_to_model, logfile)
 
 for epoch in xrange(0,epochs):
+    t1 = time.time()
     my_logger("######################################################",logfile)
     my_logger("                   TRAINING EPOCH " + str(epoch) + "/" + str(epochs),logfile)
     my_logger("######################################################",logfile)
-
+    
     
     if(usingLoadedData):
         k = [i for i in range(len(allBatches))]
@@ -180,7 +176,10 @@ for epoch in xrange(0,epochs):
                 
                 end = start + size_minibatches
                 minibatch = batch[start:end,:,:,:,:]    
-                minibatch_labels = labels[start:end,:,:,:,:]    
+                minibatch_labels = labels[start:end,:,:,:,:]   
+                
+                my_logger("Sampled following number of classes in training MINIBATCH: " + str(classesInSample(minibatch_labels, output_classes)), logfile)
+                
                 train_performance.append(model.train_on_batch(minibatch, minibatch_labels))#, class_weight = class_weight))
                 start = end
             #my_logger(str(i) + '/' + str(num_iter),logfile)
@@ -208,8 +207,6 @@ my_logger('###### SAVING TRAINED MODEL AT : ' + wd +'/Output/models/'+logfile[12
 model.save(wd+'/Output/models/'+logfile[12:]+'.h5')
 #model.save_weights(wd+'/Output/models/'+logfile[12:]+'_weights_.h5')
 
+############################# plot ##################################################
 
-
-#%%############################# plot ##################################################
-
-plotTraining(train_performance, val_performance,window_size=10)
+plotTraining(train_performance, val_performance,window_size=1)
