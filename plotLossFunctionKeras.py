@@ -61,7 +61,6 @@ def makeFiles(argv):
     output = p.communicate()
     Vacc = output[0].split()
 
-
     for i in range(0,len(train)-1):
         train[i] = float(train[i])
     train = train[:-1]
@@ -85,10 +84,12 @@ def makeFiles(argv):
 
     train = movingAverageConv(train, window_size = w)
     val = movingAverageConv(val, window_size = w)
+
+    print(len(train)/len(val))
     
     plt.plot(range(len(train)),train,'b-')
-    plt.plot(range(0,len(train),(len(train)/len(val))),val,'r-')
-    plt.show()
+    #plt.plot(range(0,len(train),(len(train)/len(val))+1),val[:],'r-')
+    #plt.plot(range(0,len(val)),val,'r-')
 
     plt.xlabel('weight updates')
     plt.ylabel('loss')
@@ -101,7 +102,8 @@ def makeFiles(argv):
     Vacc = movingAverageConv(Vacc, window_size = w)
     
     plt.plot(range(len(Tacc)),Tacc,'b-')
-    plt.plot(range(0,len(Tacc),(len(Tacc)/len(Vacc))),Vacc,'r-')
+    #plt.plot(range(0,len(Tacc),(len(Tacc)/len(Vacc))+1),Vacc[:],'r-')
+    #plt.plot(range(0,len(Vacc)),Vacc,'r-')
     plt.show()
 
     #plt.plot(train)

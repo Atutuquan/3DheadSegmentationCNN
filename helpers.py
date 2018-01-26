@@ -96,8 +96,43 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
             random.shuffle(allVoxelIndexes[0])
         return allVoxelIndexes
     
-    #samplingMethod 2 : include foreground Voxels in arguments for this option. These were poped from the total list. Then generate background voxels just like for method 1
     elif samplingMethod == 2:
+        "sample from each class equally"
+        
+        "use function getAllForegroundClassesVoxels to get coordinates from all classes (not including background)"
+        
+        for i in range(0,len(channels)): 
+            voxelIndexesSubj = []
+            backgroundVoxels = []
+            fg = getAllForegroundClassesVoxels(channels[i], dpatch) # This function returns only foreground voxels
+            
+            # WATCH OUT, FG IS A LIST OF LISTS. fIRST DIMENSION IS THE CLASS, SECOND IS THE LIST OF VOXELS OF THAT CLASS
+            
+            output_classes = len(fg)+1  # fg has all foreground classes
+            
+            for c in range(1, output_classes):
+                foregroundVoxels.extend(fg[c][random.sample(xrange(0,len(fg[c])), patches_per_subject[i]/output_classes + patches_per_subject[i]%output_classes)].tolist())
+                #print("Foreground voxel extracted " + str(foregroundVoxels) + " from channel " + str(channels[i]) + " with index " + str(i))
+            # get random voxel coordinates
+            for j in range(0,patches_per_subject[i]/output_classes):
+                backgroundVoxels.append((np.random.randint(0+dpatch/2, shapes[i][0]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][1]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][2]-(dpatch/2)-1)))
+                
+            #Replace the ones that by chance are foreground voxels (not so many in tumor data)
+            while any([e for e in foregroundVoxels if e in backgroundVoxels]):
+                ix = [e for e in foregroundVoxels if e in backgroundVoxels]
+                for index in ix:
+                    newVoxel = [np.random.randint(dpatch/2, shapes[i][0]-(dpatch/2)-1),np.random.randint(dpatch/2, shapes[i][1]-(dpatch/2)-1),np.random.randint(dpatch/2, shapes[i][2]-(dpatch/2)-1)]
+                    backgroundVoxels[backgroundVoxels.index(index)] = newVoxel
+
+            #backgroundVoxels = bg[random.sample(xrange(0,len(bg)), patches_per_subject[i]/2)].tolist()
+            allVoxelIndexes.append(foregroundVoxels + backgroundVoxels)
+            random.shuffle(allVoxelIndexes[0])
+        return allVoxelIndexes
+    
+    
+    
+    #samplingMethod 2 : include foreground Voxels in arguments for this option. These were poped from the total list. Then generate background voxels just like for method 1
+    elif samplingMethod == 3:
 
         for i in range(0,len(channels)): 
             voxelIndexesSubj = []
@@ -124,6 +159,23 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
             #backgroundVoxels = bg[random.sample(xrange(0,len(bg)), patches_per_subject[i]/2)].tolist()
             allVoxelIndexes.append(foregroundVoxels + backgroundVoxels)
         return allVoxelIndexes
+    
+def getAllForegroundClassesVoxels(groundTruthChannel, dpatch, output_classes):
+    '''Get vector of voxel coordinates for all voxel values for all freground classes'''
+    "e.g. groundTruthChannel = '/home/lukas/Documents/projects/ATLASdataset/native_part2/c0011/c0011s0006t01/c0011s0006t01_LesionSmooth_Binary.nii.gz'"
+    "NOTE: img in MRICRON starts at (1,1,1) and this function starts at (0,0,0), so points do not match when comparing in MRICRON. Add 1 to all dimensions to match in mricron. Function works properly though"
+    img = nib.load(groundTruthChannel)
+    data = img.dataobj[dpatch/2:img.shape[0]-(dpatch/2)-1, dpatch/2:img.shape[1]-(dpatch/2)-1, dpatch/2:img.shape[2]-(dpatch/2)-1] # Get a cropped image, to avoid CENTRAL foreground voxels that are too near to the border. These will still be included, but not as central voxels. As long as they are in the 9x9x9 volume (-+ 4 voxels from the central, on a segment size of 25x25x25) they will still be included in the training.
+    img.uncache()    
+    voxels = []
+    for c in range(1,output_classes):
+        voxels.append(np.argwhere(data==c))
+    voxels = voxels + dpatch/2 # need to add this, as the cropped image starts again at (0,0,0)
+    #backgroundVoxels = np.argwhere(data==0)
+    return voxels#, backgroundVoxels  # This is a List! Use totuple() to convert if this makes any trouble
+
+
+
             
 def getSubjectsToSample(channelList, subjectIndexes):
     "Actually returns channel of the subjects to sample"
@@ -292,6 +344,8 @@ def getForegroundBackgroundVoxels(groundTruthChannel, dpatch):
     from operator import itemgetter
     for k,g in groupby(enumerate(indx), lambda (i,x):i-x):
         print(map(itemgetter(1),g))'''
+        
+
 
 def totuple(a):
     "Returns tuple with tuples"
@@ -629,8 +683,8 @@ def plotTraining(train_performance, val_performance, window_size=1, savePlot=Fal
     v0 = movingAverageConv(v0, window_size)
     
     plt.plot(range(len(t0)),t0,'b-')
+    plt.plot(range(0,len(t0),(len(t0)/len(v0))),v0,'r-')
     #plt.plot(range(0,len(t0),(len(t0)/len(v0))),v0,'r-')
-    plt.plot(range(0,len(t0),(len(t0)/len(v0))+2),v0,'r-')
     plt.show()
     
     
@@ -650,8 +704,8 @@ def plotTraining(train_performance, val_performance, window_size=1, savePlot=Fal
     v1 = movingAverageConv(v1, window_size)
     
     plt.plot(range(len(t1)),t1,'b-')
+    plt.plot(range(0,len(t1),(len(t1)/len(v1))),v1,'r-')
     #plt.plot(range(0,len(t1),(len(t1)/len(v1))),v1,'r-')
-    plt.plot(range(0,len(t1),(len(t1)/len(v1))+2),v1,'r-')
     plt.show()
     
     #plt.plot(range(0,len(t1)),t1,'-',v1)#,'-',v01,'-')

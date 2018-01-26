@@ -122,8 +122,8 @@ class DeepMedic():
         model     = Model(inputs = mod1, outputs = x)
         #print_summary(model, positions=[.33, .6, .67,1])
                   
-        #rmsprop = RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-8, decay=self.optimizer_decay)
+        rmsprop = RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-8, decay=self.optimizer_decay)
         
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.compile(loss='categorical_crossentropy', optimizer=rmsprop, metrics=['accuracy'])
         
         return model

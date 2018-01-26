@@ -139,6 +139,8 @@ for epoch in xrange(0,epochs):
     
     for i in range(0, num_iter):
         
+        my_logger("###################################################### Batch " + str(i) + "/" + str(num_iter) ,logfile)
+        
         if(usingLoadedData):
             train_performance.append(model.train_on_batch(allBatches[k[i]], allLabels[k[i]]))#, class_weight = class_weight1)
             val_performance.append(model.evaluate(allValBatches[k[i]], allValLabels[k[i]]))
@@ -166,7 +168,7 @@ for epoch in xrange(0,epochs):
                 
             batch, labels = sampleTrainData(trainChannels,trainLabels, n_patches, n_subjects, dpatch, output_classes, samplingMethod, logfile)
             
-            my_logger("Sampled following number of classes in training batch: " + str(classesInSample(labels, output_classes)), logfile)
+            #my_logger("Sampled following number of classes in training batch: " + str(classesInSample(labels, output_classes)), logfile)
             
         # TRAINING ON BATCHES
             start = 0
@@ -209,4 +211,4 @@ model.save(wd+'/Output/models/'+logfile[12:]+'.h5')
 
 ############################# plot ##################################################
 
-plotTraining(train_performance, val_performance,window_size=1)
+plotTraining(train_performance, val_performance,window_size=100)

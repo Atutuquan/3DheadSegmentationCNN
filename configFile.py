@@ -10,7 +10,7 @@ wd = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/'
 ###################   parameters // replace with config files ########################
 
 #availabledatasets :'ATLAS17', 'BRATS15', 'Custom' (for explicitly giving channels)
-dataset = 'Custom'
+dataset = 'BRATS15'
 
 trainChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainFlair_1subj.cfg',
                 '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1_1subj.cfg',
@@ -51,33 +51,33 @@ allValLabelsAddress = '/home/lukas/Documents/projects/brainSegmentation/deepMedi
 
 # MODEL PARAMETERS
 dpatch=51
-L2 = 0.0
+L2 = 0.0001
 load_model = False
-path_to_model = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras//Output/models/TrainSessionCustom_DeepMedic2018-01-25_1532.h5'
-logfile_model = 'TrainSessionCustom_DeepMedic2018-01-25_1532'
+path_to_model = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras//Output/models/TrainSessionBRATS15_DeepMedic2018-01-25_1830.h5'
+logfile_model = 'TrainSessionBRATS15_DeepMedic2018-01-26_1237-UsingLoadedModel01-25_1830_big2smallBatchSizes'
 num_channels = 4
 output_classes = 5
 dropout = [0,0]  # dropout for last two fully connected layers
-learning_rate = 0.001
+learning_rate = 0.0001
 optimizer_decay = 0
 
 # TRAIN PARAMETERS
-num_iter = 10
-epochs = 6
+num_iter = 50
+epochs = 30
 samplingMethod = 1
 
-n_patches = 1000
-n_subjects = 1 # Check that this is not larger than subjects in training file
-size_minibatches = 100  # Check that this value is not larger than the ammount of patches per subject per class
+n_patches = 2000
+n_subjects = 25 # Check that this is not larger than subjects in training file
+size_minibatches = 200  # Check that this value is not larger than the ammount of patches per subject per class
 
 n_patches_val = 100
-n_subjects_val = 1 # Check that this is not larger than subjects in validation file
+n_subjects_val = 25 # Check that this is not larger than subjects in validation file
 size_minibatches_val = 100  # Check that this value is not larger than the ammount of patches per subject per class
 
 
 # TEST PARAMETERS
-list_subjects_fullSegmentation = [0]
-epochs_for_fullSegmentation = [5]
+list_subjects_fullSegmentation = [0,1,14,15]
+epochs_for_fullSegmentation = [1,5,9,19,29]
 size_test_minibatches = 200
 saveSegmentation = True
 
