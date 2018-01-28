@@ -50,10 +50,10 @@ def getSubjectShapes(subjectIndexes, n_patches, channelList):
     return shapes      
 
 
-def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_patches, groundTruthChannel_list, samplingMethod, allForegroundVoxels = ""):
+def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_patches, groundTruthChannel_list, samplingMethod, output_classes, allForegroundVoxels = ""):
     "Alternative improved function of the same named one above."
     "Here extract the channels from the subject indexes, and loop over them. Then in second loop extract as many needed voxel coordinates per subject."
-    methods =["Random sampling","Equal sampling background/foreground","Equal sampling background/foreground with exhaustive foreground samples"]
+    methods =["Random sampling","Equal sampling background/foreground","Equal sampling all classes center voxel","Equal sampling background/foreground with exhaustive foreground samples"]
     print("Generating voxel indexes with method: " + methods[samplingMethod])
     channels = getSubjectChannels(subjectIndexes, groundTruthChannel_list)
     allVoxelIndexes = []
@@ -101,17 +101,21 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
         
         "use function getAllForegroundClassesVoxels to get coordinates from all classes (not including background)"
         
-        for i in range(0,len(channels)): 
+        for i in range(0,len(channels)):  # iteration over subjects
             voxelIndexesSubj = []
             backgroundVoxels = []
-            fg = getAllForegroundClassesVoxels(channels[i], dpatch) # This function returns only foreground voxels
+            fg = getAllForegroundClassesVoxels(channels[i], dpatch, output_classes) # This function returns only foreground voxels
             
             # WATCH OUT, FG IS A LIST OF LISTS. fIRST DIMENSION IS THE CLASS, SECOND IS THE LIST OF VOXELS OF THAT CLASS
+            foregroundVoxels = []
             
-            output_classes = len(fg)+1  # fg has all foreground classes
             
-            for c in range(1, output_classes):
-                foregroundVoxels.extend(fg[c][random.sample(xrange(0,len(fg[c])), patches_per_subject[i]/output_classes + patches_per_subject[i]%output_classes)].tolist())
+            patches_to_sample = [patches_per_subject[i]/output_classes] * output_classes #
+            extra = random.sample(range(output_classes),1)
+            patches_to_sample[extra[0]] = patches_to_sample[extra[0]] + patches_per_subject[i]%output_classes
+            
+            for c in range(0, output_classes-1):
+                foregroundVoxels.extend(fg[c][random.sample(xrange(0,len(fg[c])), min(patches_to_sample[c],len(fg[c])))].tolist())
                 #print("Foreground voxel extracted " + str(foregroundVoxels) + " from channel " + str(channels[i]) + " with index " + str(i))
             # get random voxel coordinates
             for j in range(0,patches_per_subject[i]/output_classes):
@@ -128,9 +132,7 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
             allVoxelIndexes.append(foregroundVoxels + backgroundVoxels)
             random.shuffle(allVoxelIndexes[0])
         return allVoxelIndexes
-    
-    
-    
+    '''
     #samplingMethod 2 : include foreground Voxels in arguments for this option. These were poped from the total list. Then generate background voxels just like for method 1
     elif samplingMethod == 3:
 
@@ -158,7 +160,7 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
 
             #backgroundVoxels = bg[random.sample(xrange(0,len(bg)), patches_per_subject[i]/2)].tolist()
             allVoxelIndexes.append(foregroundVoxels + backgroundVoxels)
-        return allVoxelIndexes
+        return allVoxelIndexes'''
     
 def getAllForegroundClassesVoxels(groundTruthChannel, dpatch, output_classes):
     '''Get vector of voxel coordinates for all voxel values for all freground classes'''
@@ -169,8 +171,10 @@ def getAllForegroundClassesVoxels(groundTruthChannel, dpatch, output_classes):
     img.uncache()    
     voxels = []
     for c in range(1,output_classes):
-        voxels.append(np.argwhere(data==c))
-    voxels = voxels + dpatch/2 # need to add this, as the cropped image starts again at (0,0,0)
+        coords = np.argwhere(data==c)
+        coords = coords + dpatch/2
+        voxels.append(coords)
+    #voxels = voxels + dpatch/2 # need to add this, as the cropped image starts again at (0,0,0)
     #backgroundVoxels = np.argwhere(data==0)
     return voxels#, backgroundVoxels  # This is a List! Use totuple() to convert if this makes any trouble
 
@@ -276,13 +280,16 @@ def sampleTrainData(channelsList, groundTruthChannel_list, n_patches, n_subjects
     labelsFile.close()    
     subjectIndexes = generateRandomIndexesSubjects(n_subjects, total_subjects) 
     shapes = getSubjectShapes(subjectIndexes, n_patches, groundTruthChannel_list)
-    voxelCoordinates = generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_patches, groundTruthChannel_list, samplingMethod)
+    voxelCoordinates = generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_patches, groundTruthChannel_list, samplingMethod, output_classes)
 
     for i in xrange(0,len(channelsList)):
         patches[:,:,:,:,i] = extractImagePatch(channelsList[i], subjectIndexes, patches, voxelCoordinates, n_patches, dpatch, debug=False)
              
     labels = np.array(extractLabels(groundTruthChannel_list, subjectIndexes, voxelCoordinates, dpatch))
     labels = to_categorical(labels.astype(int),output_classes)
+    
+    if(samplingMethod == 2):
+        patches = patches[0:len(labels)]  # when using equal sampling (samplingMethod 2), because some classes have very few voxels in a head, there are fewer patches as intended. Patches is initialized as the maximamum value, so needs to get cut to match labels.
     end = time.time()
     my_logger("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s", logfile)
     return patches, labels

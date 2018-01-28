@@ -129,7 +129,7 @@ if load_model:
 for epoch in xrange(0,epochs):
     t1 = time.time()
     my_logger("######################################################",logfile)
-    my_logger("                   TRAINING EPOCH " + str(epoch) + "/" + str(epochs),logfile)
+    my_logger("                   TRAINING EPOCH " + str(epoch+1) + "/" + str(epochs),logfile)
     my_logger("######################################################",logfile)
     
     
@@ -139,7 +139,7 @@ for epoch in xrange(0,epochs):
     
     for i in range(0, num_iter):
         
-        my_logger("###################################################### Batch " + str(i) + "/" + str(num_iter) ,logfile)
+        my_logger("###################################################### Batch " + str(i+1) + "/" + str(num_iter) ,logfile)
         
         if(usingLoadedData):
             train_performance.append(model.train_on_batch(allBatches[k[i]], allLabels[k[i]]))#, class_weight = class_weight1)
@@ -153,7 +153,7 @@ for epoch in xrange(0,epochs):
             start = 0
             n_minibatches = len(valbatch)/size_minibatches_val
             for j in range(0,n_minibatches):
-                print("validation on minibatch " +str(j)+ "/" + str(n_minibatches))
+                print("validation on minibatch " +str(j+1)+ "/" + str(n_minibatches))
                 
                 end = start + size_minibatches
                 minivalbatch = valbatch[start:end,:,:,:,:]    
@@ -168,13 +168,13 @@ for epoch in xrange(0,epochs):
                 
             batch, labels = sampleTrainData(trainChannels,trainLabels, n_patches, n_subjects, dpatch, output_classes, samplingMethod, logfile)
             
-            #my_logger("Sampled following number of classes in training batch: " + str(classesInSample(labels, output_classes)), logfile)
+            my_logger("Sampled following number of classes in training batch: " + str(classesInSample(labels, output_classes)), logfile)
             
         # TRAINING ON BATCHES
             start = 0
             n_minibatches = len(batch)/size_minibatches
             for j in range(0,n_minibatches):
-                print("training on minibatch " +str(j)+ "/" + str(n_minibatches))
+                print("training on minibatch " +str(j+1)+ "/" + str(n_minibatches))
                 
                 end = start + size_minibatches
                 minibatch = batch[start:end,:,:,:,:]    
@@ -204,11 +204,11 @@ for epoch in xrange(0,epochs):
 #https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model
 
 
-# SAVING AND LOADING A MODEL. Works fine when not using non-standard keras library metrics (e.g. dice)
-my_logger('###### SAVING TRAINED MODEL AT : ' + wd +'/Output/models/'+logfile[12:]+'.h5', logfile)
-model.save(wd+'/Output/models/'+logfile[12:]+'.h5')
-#model.save_weights(wd+'/Output/models/'+logfile[12:]+'_weights_.h5')
+    # SAVING AND LOADING A MODEL. Works fine when not using non-standard keras library metrics (e.g. dice)
+    my_logger('###### SAVING TRAINED MODEL AT : ' + wd +'/Output/models/'+logfile[12:]+'.h5', logfile)
+    model.save(wd+'/Output/models/'+logfile[12:]+'.h5')
+    #model.save_weights(wd+'/Output/models/'+logfile[12:]+'_weights_.h5')
 
 ############################# plot ##################################################
 
-plotTraining(train_performance, val_performance,window_size=100)
+plotTraining(train_performance, val_performance,window_size=500)

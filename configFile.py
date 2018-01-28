@@ -53,8 +53,8 @@ allValLabelsAddress = '/home/lukas/Documents/projects/brainSegmentation/deepMedi
 dpatch=51
 L2 = 0.0001
 load_model = False
-path_to_model = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras//Output/models/TrainSessionBRATS15_DeepMedic2018-01-25_1830.h5'
-logfile_model = 'TrainSessionBRATS15_DeepMedic2018-01-26_1237-UsingLoadedModel01-25_1830_big2smallBatchSizes'
+path_to_model = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras//Output/models/TrainSessionBRATS15_DeepMedic2018-01-26_1521.h5'
+logfile_model = 'TrainSessionBRATS15_DeepMedic2018-01-26_1521'
 num_channels = 4
 output_classes = 5
 dropout = [0,0]  # dropout for last two fully connected layers
@@ -62,13 +62,13 @@ learning_rate = 0.0001
 optimizer_decay = 0
 
 # TRAIN PARAMETERS
-num_iter = 50
+num_iter = 40
 epochs = 30
-samplingMethod = 1
+samplingMethod = 2
 
-n_patches = 2000
-n_subjects = 25 # Check that this is not larger than subjects in training file
-size_minibatches = 200  # Check that this value is not larger than the ammount of patches per subject per class
+n_patches = 3000
+n_subjects = 150 # Check that this is not larger than subjects in training file
+size_minibatches = 100  # Check that this value is not larger than the ammount of patches per subject per class
 
 n_patches_val = 100
 n_subjects_val = 25 # Check that this is not larger than subjects in validation file
