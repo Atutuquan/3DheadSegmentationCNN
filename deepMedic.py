@@ -8,7 +8,7 @@ Created on Wed Dec  6 13:58:48 2017
 import os
 import time
 from model import DeepMedic
-from helpers import sampleTrainData, fullHeadSegmentation, my_logger, classesInSample, plotTraining
+from helpers import sampleTrainData, fullHeadSegmentation, my_logger, classesInSample, plotTraining, getClassProportions
 from random import shuffle
 from keras.callbacks import ModelCheckpoint#, EarlyStopping, History
 import numpy as np
@@ -168,7 +168,16 @@ for epoch in xrange(0,epochs):
                 
             batch, labels = sampleTrainData(trainChannels,trainLabels, n_patches, n_subjects, dpatch, output_classes, samplingMethod, logfile)
             
-            my_logger("Sampled following number of classes in training batch: " + str(classesInSample(labels, output_classes)), logfile)
+            shuffleOrder = np.arange(batch.shape[0])
+            np.random.shuffle(shuffleOrder)
+            batch = batch[shuffleOrder]
+            labels = labels[shuffleOrder]
+            
+            #freq = classesInSample(labels, output_classes)
+            
+            #my_logger("Sampled following number of classes in training batch: " + str(freq), logfile)
+            
+            #print(getClassProportions(freq))
             
         # TRAINING ON BATCHES
             start = 0
@@ -180,7 +189,9 @@ for epoch in xrange(0,epochs):
                 minibatch = batch[start:end,:,:,:,:]    
                 minibatch_labels = labels[start:end,:,:,:,:]   
                 
-                my_logger("Sampled following number of classes in training MINIBATCH: " + str(classesInSample(minibatch_labels, output_classes)), logfile)
+                #freq = classesInSample(minibatch_labels, output_classes)
+                #my_logger("Sampled following number of classes in training MINIBATCH: " + str(smpl), logfile)
+                #print(getClassProportions(freq))
                 
                 train_performance.append(model.train_on_batch(minibatch, minibatch_labels))#, class_weight = class_weight))
                 start = end
@@ -211,4 +222,4 @@ for epoch in xrange(0,epochs):
 
 ############################# plot ##################################################
 
-plotTraining(train_performance, val_performance,window_size=500)
+plotTraining(train_performance, val_performance,window_size=1)

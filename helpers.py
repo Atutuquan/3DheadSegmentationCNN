@@ -68,7 +68,7 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
                 
             allVoxelIndexes.append(voxelIndexesSubj)
             
-        random.shuffle(allVoxelIndexes[0])
+        random.shuffle(allVoxelIndexes[i])
         return allVoxelIndexes
     
     elif samplingMethod == 1:
@@ -93,7 +93,7 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
 
             #backgroundVoxels = bg[random.sample(xrange(0,len(bg)), patches_per_subject[i]/2)].tolist()
             allVoxelIndexes.append(foregroundVoxels + backgroundVoxels)
-            random.shuffle(allVoxelIndexes[0])
+            random.shuffle(allVoxelIndexes[i])
         return allVoxelIndexes
     
     elif samplingMethod == 2:
@@ -108,19 +108,18 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
             
             # WATCH OUT, FG IS A LIST OF LISTS. fIRST DIMENSION IS THE CLASS, SECOND IS THE LIST OF VOXELS OF THAT CLASS
             foregroundVoxels = []
-            
-            
             patches_to_sample = [patches_per_subject[i]/output_classes] * output_classes #
             extra = random.sample(range(output_classes),1)
             patches_to_sample[extra[0]] = patches_to_sample[extra[0]] + patches_per_subject[i]%output_classes
             
             for c in range(0, output_classes-1):
                 foregroundVoxels.extend(fg[c][random.sample(xrange(0,len(fg[c])), min(patches_to_sample[c],len(fg[c])))].tolist())
+                #foregroundVoxels.extend([1] * min(patches_to_sample[c],len(fg[c])))
                 #print("Foreground voxel extracted " + str(foregroundVoxels) + " from channel " + str(channels[i]) + " with index " + str(i))
             # get random voxel coordinates
             for j in range(0,patches_per_subject[i]/output_classes):
-                backgroundVoxels.append((np.random.randint(0+dpatch/2, shapes[i][0]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][1]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][2]-(dpatch/2)-1)))
-                
+                backgroundVoxels.append([np.random.randint(0+dpatch/2, shapes[i][0]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][1]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][2]-(dpatch/2)-1)])
+                #backgroundVoxels.extend([0])
             #Replace the ones that by chance are foreground voxels (not so many in tumor data)
             while any([e for e in foregroundVoxels if e in backgroundVoxels]):
                 ix = [e for e in foregroundVoxels if e in backgroundVoxels]
@@ -130,7 +129,7 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
 
             #backgroundVoxels = bg[random.sample(xrange(0,len(bg)), patches_per_subject[i]/2)].tolist()
             allVoxelIndexes.append(foregroundVoxels + backgroundVoxels)
-            random.shuffle(allVoxelIndexes[0])
+            random.shuffle(allVoxelIndexes[i])
         return allVoxelIndexes
     '''
     #samplingMethod 2 : include foreground Voxels in arguments for this option. These were poped from the total list. Then generate background voxels just like for method 1
@@ -227,6 +226,7 @@ def get_patches_per_subject( n_patches, n_subjects):
 def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patches, dpatch, debug=False):
     subjects = getSubjectsToSample(channel, subjectIndexes)
     vol = np.zeros((n_patches,dpatch,dpatch,dpatch),dtype='int16')
+    
     k = 0
     if (len(subjectIndexes) > 1):
         for i in xrange(0,len(voxelCoordinates)):
@@ -239,10 +239,10 @@ def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patc
                 D1,D2,D3 = voxelCoordinates[i][j]        
                 #print(i,j)
                 #print(D1,D2,D3)
-                
+               
                 vol[k,:,:,:] = img_data[D1-(dpatch/2):D1+(dpatch/2)+1,D2-(dpatch/2):D2+(dpatch/2)+1,D3-(dpatch/2):D3+(dpatch/2)+1]
                 
-                #vol[k,:,:,:] = proxy_img.dataobj[D1-(dpatch/2):D1+(dpatch/2)+1,D2-(dpatch/2):D2+(dpatch/2)+1,D3-(dpatch/2):D3+(dpatch/2)+1]  # at some point change this to be the central voxel. And change how the voxels are sampled (does not need to subtract the dpatch size)
+                
                 k=k+1
             proxy_img.uncache()
             del img_data
@@ -505,7 +505,12 @@ def classesInSample(labels, output_classes):
         occurences.append(list(classes).count(c))
     return occurences
 
-
+def getClassProportions(classFrequencies):
+    t = float(sum(classFrequencies))
+    p = []
+    for i in classFrequencies:
+        p.append(round(i*100/t,1))
+    return p
 
 def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, epoch, saveSegmentation = False):    
     subjectIndex = [subjectIndex]
@@ -690,7 +695,7 @@ def plotTraining(train_performance, val_performance, window_size=1, savePlot=Fal
     v0 = movingAverageConv(v0, window_size)
     
     plt.plot(range(len(t0)),t0,'b-')
-    plt.plot(range(0,len(t0),(len(t0)/len(v0))),v0,'r-')
+    plt.plot(range(0,len(t0),(len(t0)/len(v0))+1),v0[:-8],'r-')
     #plt.plot(range(0,len(t0),(len(t0)/len(v0))),v0,'r-')
     plt.show()
     
@@ -711,7 +716,7 @@ def plotTraining(train_performance, val_performance, window_size=1, savePlot=Fal
     v1 = movingAverageConv(v1, window_size)
     
     plt.plot(range(len(t1)),t1,'b-')
-    plt.plot(range(0,len(t1),(len(t1)/len(v1))),v1,'r-')
+    plt.plot(range(0,len(t1),(len(t1)/len(v1))+1),v1[:-8],'r-')
     #plt.plot(range(0,len(t1),(len(t1)/len(v1))),v1,'r-')
     plt.show()
     

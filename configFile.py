@@ -12,11 +12,11 @@ wd = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/'
 #availabledatasets :'ATLAS17', 'BRATS15', 'Custom' (for explicitly giving channels)
 dataset = 'BRATS15'
 
-trainChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainFlair_1subj.cfg',
-                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1_1subj.cfg',
-                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1c_1subj.cfg',
-                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT2_1subj.cfg']
-trainLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainGT_1subj.cfg'
+trainChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainFlair_2subj.cfg',
+                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1_2subj.cfg',
+                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1c_2subj.cfg',
+                '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT2_2subj.cfg']
+trainLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainGT_2subj.cfg'
 
 '''validationChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valFlair.cfg',
                       '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1.cfg',
@@ -53,8 +53,8 @@ allValLabelsAddress = '/home/lukas/Documents/projects/brainSegmentation/deepMedi
 dpatch=51
 L2 = 0.0001
 load_model = False
-path_to_model = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras//Output/models/TrainSessionBRATS15_DeepMedic2018-01-26_1521.h5'
-logfile_model = 'TrainSessionBRATS15_DeepMedic2018-01-26_1521'
+path_to_model = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras//Output/models/TrainSessionBRATS15_DeepMedic2018-01-28_1925.h5'
+logfile_model = 'TrainSessionBRATS15_DeepMedic2018-01-28_1925'
 num_channels = 4
 output_classes = 5
 dropout = [0,0]  # dropout for last two fully connected layers
@@ -62,16 +62,16 @@ learning_rate = 0.0001
 optimizer_decay = 0
 
 # TRAIN PARAMETERS
-num_iter = 40
+num_iter = 60
 epochs = 30
 samplingMethod = 2
 
-n_patches = 3000
-n_subjects = 150 # Check that this is not larger than subjects in training file
-size_minibatches = 100  # Check that this value is not larger than the ammount of patches per subject per class
+n_patches = 4200
+n_subjects = 100 # Check that this is not larger than subjects in training file
+size_minibatches = 60 # Check that this value is not larger than the ammount of patches per subject per class
 
 n_patches_val = 100
-n_subjects_val = 25 # Check that this is not larger than subjects in validation file
+n_subjects_val = 10 # Check that this is not larger than subjects in validation file
 size_minibatches_val = 100  # Check that this value is not larger than the ammount of patches per subject per class
 
 
