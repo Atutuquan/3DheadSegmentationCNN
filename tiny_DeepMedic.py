@@ -1,6 +1,14 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
+Created on Tue Feb 13 15:13:15 2018
+
+@author: lukas
+"""
+
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
 Created on Fri Dec  8 10:26:01 2017
 
 @author: lukas
@@ -25,14 +33,14 @@ from keras.optimizers import RMSprop
 
 
 
-class DeepMedic():
+class tiny_DeepMedic():
     
     def __init__(self, dpatch, output_classes, num_channels, L2, dropout, learning_rate, optimizer_decay):
         
         self.dpatch = dpatch
         self.output_classes = output_classes
-        self.conv_features = [30, 30, 40, 40, 40, 40, 50, 50]
-        self.fc_features = [150,150, output_classes]
+        self.conv_features = [1]
+        self.fc_features = [1,1, output_classes]
         self.d_factor = 3  # downsampling factor = stride in downsampling pathway
         self.num_channels = num_channels
         self.L2 = L2
@@ -58,49 +66,27 @@ class DeepMedic():
         
         x1        = Cropping3D(cropping = ((13,13),(13,13),(13,13)), input_shape=(self.dpatch,self.dpatch,self.dpatch, self.num_channels))(mod1)
         x1        = Conv3D(filters = self.conv_features[0], 
-                           kernel_size = (3,3,3), 
+                           kernel_size = (17,17,17), 
                            #kernel_initializer=he_normal(seed=seed),
                            kernel_initializer=Orthogonal(),
                            kernel_regularizer=regularizers.l2(self.L2))(x1)
         x1        = BatchNormalization()(x1)
         #x1        = Activation('relu')(x1)
         x1        = PReLU()(x1)
-        #x1        = BatchNormalization()(x1)
         
-        for feature in self.conv_features[1:]:  
-            x1        = Conv3D(filters = feature, 
-                               kernel_size = (3,3,3), 
-                               #kernel_initializer=he_normal(seed=seed),
-                               kernel_initializer=Orthogonal(),
-                               kernel_regularizer=regularizers.l2(self.L2))(x1)
-            x1        = BatchNormalization()(x1)
-            #x1        = Activation('relu')(x1)
-            x1        = PReLU()(x1)
-            #x1        = BatchNormalization()(x1)
             
         #############   Downsampled pathway   ##################   
         
         x2        = MaxPooling3D(pool_size=(self.d_factor,self.d_factor,self.d_factor), padding="same")(mod1)
         x2        = Conv3D(filters = self.conv_features[0], 
-                           kernel_size = (3,3,3), 
+                           kernel_size = (17,17,17), 
                            #kernel_initializer=he_normal(seed=seed),
                            kernel_initializer=Orthogonal(),
                            kernel_regularizer=regularizers.l2(self.L2))(x2)
         x2        = BatchNormalization()(x2)
         #x2        = Activation('relu')(x2)
         x2        = PReLU()(x2)
-        #x2        = BatchNormalization()(x2)
         
-        for feature in self.conv_features[1:]:    
-            x2        = Conv3D(filters = feature, 
-                               kernel_size = (3,3,3), 
-                               #kernel_initializer=he_normal(seed=seed),
-                               kernel_initializer=Orthogonal(),
-                               kernel_regularizer=regularizers.l2(self.L2))(x2)
-            x2        = BatchNormalization()(x2)
-            #x2        = Activation('relu')(x2)
-            x2        = PReLU()(x2)
-            #x2        = BatchNormalization()(x2)
         
         x2        = UpSampling3D(size=(9,9,9))(x2)
         
@@ -117,17 +103,6 @@ class DeepMedic():
         
         #   Fully convolutional variant
         
-        #x        = Dropout(rate = self.dropout[0])(x)
-        x        = Conv3D(filters = self.fc_features[0], 
-                           kernel_size = (1,1,1), 
-                           #kernel_initializer=he_normal(seed=seed),
-                           kernel_initializer=Orthogonal(),
-                           kernel_regularizer=regularizers.l2(self.L2))(x)
-        x        = BatchNormalization()(x)
-        #x        = Activation('relu')(x)
-        x        = PReLU()(x)
-        #x        = BatchNormalization()(x)
-        #x        = Dropout(rate = self.dropout[0])(x)
         x        = Conv3D(filters = self.fc_features[1], 
                            kernel_size = (1,1,1), 
                            #kernel_initializer=he_normal(seed=seed),
@@ -136,7 +111,6 @@ class DeepMedic():
         x        = BatchNormalization()(x)
         #x        = Activation('relu')(x)
         x        = PReLU()(x)
-        #x        = BatchNormalization()(x)
         #x        = Dropout(rate = self.dropout[1])(x)
         #x        = Flatten()(x)
         x        = Dense(units = self.fc_features[2], activation = 'softmax', name = 'softmax')(x)
@@ -144,8 +118,8 @@ class DeepMedic():
         model     = Model(inputs = mod1, outputs = x)
         #print_summary(model, positions=[.33, .6, .67,1])
                   
-        rmsprop = RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-8, decay=self.optimizer_decay)
+        #rmsprop = RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-8, decay=self.optimizer_decay)
         
-        model.compile(loss='categorical_crossentropy', optimizer=rmsprop, metrics=['accuracy'])
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         
         return model

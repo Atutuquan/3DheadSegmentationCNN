@@ -166,7 +166,7 @@ def getAllForegroundClassesVoxels(groundTruthChannel, dpatch, output_classes):
     "e.g. groundTruthChannel = '/home/lukas/Documents/projects/ATLASdataset/native_part2/c0011/c0011s0006t01/c0011s0006t01_LesionSmooth_Binary.nii.gz'"
     "NOTE: img in MRICRON starts at (1,1,1) and this function starts at (0,0,0), so points do not match when comparing in MRICRON. Add 1 to all dimensions to match in mricron. Function works properly though"
     img = nib.load(groundTruthChannel)
-    data = img.dataobj[dpatch/2:img.shape[0]-(dpatch/2)-1, dpatch/2:img.shape[1]-(dpatch/2)-1, dpatch/2:img.shape[2]-(dpatch/2)-1] # Get a cropped image, to avoid CENTRAL foreground voxels that are too near to the border. These will still be included, but not as central voxels. As long as they are in the 9x9x9 volume (-+ 4 voxels from the central, on a segment size of 25x25x25) they will still be included in the training.
+    data = np.array(img.dataobj[dpatch/2:img.shape[0]-(dpatch/2)-1, dpatch/2:img.shape[1]-(dpatch/2)-1, dpatch/2:img.shape[2]-(dpatch/2)-1],dtype='int16') # Get a cropped image, to avoid CENTRAL foreground voxels that are too near to the border. These will still be included, but not as central voxels. As long as they are in the 9x9x9 volume (-+ 4 voxels from the central, on a segment size of 25x25x25) they will still be included in the training.
     img.uncache()    
     voxels = []
     for c in range(1,output_classes):
@@ -196,7 +196,7 @@ def extractLabels(groundTruthChannel_list, subjectIndexes, voxelCoordinates, dpa
         for i in xrange(0,len(voxelCoordinates)):
             subject = str(subjects[i])[:-1]
             proxy_label = nib.load(subject)
-            label_data = proxy_label.get_data()
+            label_data = np.array(proxy_label.get_data(),dtype='int16')
             for j in xrange(0,len(voxelCoordinates[i])):     
                 D1,D2,D3 = voxelCoordinates[i][j]
                 labels.append(label_data[D1-4:D1+5,D2-4:D2+5,D3-4:D3+5])
@@ -206,7 +206,7 @@ def extractLabels(groundTruthChannel_list, subjectIndexes, voxelCoordinates, dpa
     elif(len(subjectIndexes) == 1):
         subject = str(subjects[0])[:-1]
         proxy_label = nib.load(subject)
-        label_data = np.array(proxy_label.get_data(),'float32')
+        label_data = np.array(proxy_label.get_data(),dtype='int16')
         for i in xrange(0,len(voxelCoordinates[0])):
             D1,D2,D3 = voxelCoordinates[0][i]
             labels.append(label_data[D1-4:D1+5,D2-4:D2+5,D3-4:D3+5])
@@ -233,7 +233,9 @@ def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patc
             subject = str(subjects[i])[:-1]
             proxy_img = nib.load(subject)
             
-            img_data = proxy_img.get_data()
+            img_data = np.array(proxy_img.get_data(),dtype='int16')
+            
+            img_data = normalizeMRI(img_data)
             
             for j in xrange(0,len(voxelCoordinates[i])):     
                 D1,D2,D3 = voxelCoordinates[i][j]        
@@ -252,7 +254,10 @@ def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patc
         #print("only subject " + str(subjects))
         subject = str(subjects[0])[:-1]
         proxy_img = nib.load(subject)
-        img_data = proxy_img.get_data()
+        img_data = np.array(proxy_img.get_data(),dtype='int16')
+        
+        img_data = normalizeMRI(img_data)
+        
         for i in xrange(0,len(voxelCoordinates[0])):
             
             
@@ -312,7 +317,7 @@ def generateAllForegroundVoxels(groundTruthChannel_list, dpatch):
         allForegroundVoxels.append(fg)
     return allForegroundVoxels
     
-
+'''
 def popForegroundVoxels(allForegroundVoxels, patches_per_subject):
     "To be included inside generateVoxelIndexes in samplingMethod 2. Needs input of allForegroundVoxels that has to be passed through all function wrappers..."
     # syntax: allForegroundVoxels[subject].pop(voxelIndex)
@@ -328,7 +333,7 @@ def popForegroundVoxels(allForegroundVoxels, patches_per_subject):
     for voxelIndex in fg_voxels:
         foregroundVoxels.append(allForegroundVoxels[i].pop(voxelIndex))
     
-
+'''
     
 
 
@@ -337,7 +342,7 @@ def getForegroundBackgroundVoxels(groundTruthChannel, dpatch):
     "e.g. groundTruthChannel = '/home/lukas/Documents/projects/ATLASdataset/native_part2/c0011/c0011s0006t01/c0011s0006t01_LesionSmooth_Binary.nii.gz'"
     "NOTE: img in MRICRON starts at (1,1,1) and this function starts at (0,0,0), so points do not match when comparing in MRICRON. Add 1 to all dimensions to match in mricron. Function works properly though"
     img = nib.load(groundTruthChannel)
-    data = img.dataobj[dpatch/2:img.shape[0]-(dpatch/2)-1, dpatch/2:img.shape[1]-(dpatch/2)-1, dpatch/2:img.shape[2]-(dpatch/2)-1] # Get a cropped image, to avoid CENTRAL foreground voxels that are too near to the border. These will still be included, but not as central voxels. As long as they are in the 9x9x9 volume (-+ 4 voxels from the central, on a segment size of 25x25x25) they will still be included in the training.
+    data = np.array(img.dataobj[dpatch/2:img.shape[0]-(dpatch/2)-1, dpatch/2:img.shape[1]-(dpatch/2)-1, dpatch/2:img.shape[2]-(dpatch/2)-1],dtype='int16') # Get a cropped image, to avoid CENTRAL foreground voxels that are too near to the border. These will still be included, but not as central voxels. As long as they are in the 9x9x9 volume (-+ 4 voxels from the central, on a segment size of 25x25x25) they will still be included in the training.
     img.uncache()    
     foregroundVoxels = np.argwhere(data>0)
     foregroundVoxels = foregroundVoxels + dpatch/2 # need to add this, as the cropped image starts again at (0,0,0)
@@ -436,7 +441,7 @@ def fbeta(y_true, y_pred, threshold_shift=0):
     beta_squared = beta ** 2
     return K.mean((beta_squared + 1) * (precision * recall) / (beta_squared * precision + recall + K.epsilon()))
 
-
+'''
 def TP(y_true, y_pred, threshold_shift=0):
     beta = 2
 
@@ -460,7 +465,7 @@ def FP(y_true, y_pred, threshold_shift=0):
 
     fp = K.sum(K.round(K.clip(y_pred_bin - y_true, 0, 1)), axis=1)
     return(fp)
-    
+'''    
 def sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatch,logfile):
     "output should be a batch containing all (non-overlapping) image patches of the whole head, and the labels"
     "Actually something like sampleTraindata, thereby inputting extractImagePatch with all voxels of a subject"
@@ -488,17 +493,18 @@ def sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatc
     n_patches = len(voxelCoordinates)
     patches = np.zeros((n_patches,dpatch,dpatch,dpatch,num_channels),dtype='int8')
     
+    
     for i in xrange(0,len(testChannels)):
         patches[:,:,:,:,i] = extractImagePatch(testChannels[i], subjectIndex, patches, [voxelCoordinates], n_patches, dpatch, debug=False)
-             
+                     
     labels = np.array(extractLabels(testLabels, subjectIndex, [voxelCoordinates], dpatch))
     labels = to_categorical(labels.astype(int),output_classes)
     #print("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s")
     return patches, labels, voxelCoordinates, shape, affine
 
 
-def classesInSample(labels, output_classes):
-    classes = np.argmax(labels, axis=4)
+def classesInSample(labels, output_classes, axis=4):
+    classes = np.argmax(labels, axis=axis)
     classes = classes.flatten()
     occurences = []
     for c in range(0,output_classes):
@@ -514,11 +520,20 @@ def getClassProportions(classFrequencies):
 
 def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, epoch, saveSegmentation = False):    
     subjectIndex = [subjectIndex]
-    accuracy = []
-    f1 = []
+    positives = []
+    negatives = []
+    truePositives = []
+    trueNegatives = []
+    falsePositives = []
+    falseNegatives = []
+    sens = []
+    spec = []
+    Dice = []
+    accuracy = []  # per class
+    total_accuracy = []  # as a whole
     auc_roc = []
-    coverage = []
-    label_ranking_loss = []
+    
+
     
     batch, labels, voxelCoordinates, shape, affine = sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatch,logfile)
     print("Extracted image patches for full head segmentation")
@@ -527,7 +542,7 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     n_minibatches = len(batch)/size_minibatches
     indexes = []
     for j in range(0,n_minibatches):
-        #print("training on minibatch " +str(j)+ "/" + str(n_minibatches))
+        print("training on minibatch " +str(j)+ "/" + str(n_minibatches))
         end = start + size_minibatches
         miniTestbatch = batch[start:end,:,:,:,:]    
         miniTestbatch_labels = labels[start:end,:,:,:,:]    
@@ -536,13 +551,22 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
         class_pred = np.argmax(prediction, axis=4)
         indexes.extend(class_pred)        
         #test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=0))
-        acc_score, f1_score, roc_score, coverage_score, label_ranking_loss_score =  evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels )
-        accuracy.append(acc_score)
-        f1.append(f1_score)
-        auc_roc.append(roc_score)
-        coverage.append(coverage_score)
-        label_ranking_loss.append(label_ranking_loss_score)
+        P,N,TP,TN,FP,FN,ACC,acc,roc =  evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels )
+        
+        positives.append(P)
+        negatives.append(N)
+        truePositives.append(TP)
+        trueNegatives.append(TN)
+        falsePositives.append(FP)
+        falseNegatives.append(FN)
+        #sens.append(TPR)
+        #spec.append(SPC)
+        #Dice.append(DSC)
+        accuracy.append(ACC)  # per class
+        total_accuracy.append(acc)
+        auc_roc.append(roc)
         start = end
+        
     
     #last one
     end = start + (len(voxelCoordinates)-n_minibatches*size_minibatches)
@@ -552,21 +576,36 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     class_pred = np.argmax(prediction, axis=4)
     indexes.extend(class_pred)            
     #test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=0))
-    acc_score, f1_score, roc_score, coverage_score, label_ranking_loss_score =  evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels )
-    accuracy.append(acc_score)
-    f1.append(f1_score)
-    auc_roc.append(roc_score)
-    coverage.append(coverage_score)
-    label_ranking_loss.append(label_ranking_loss_score)
+    P,N,TP,TN,FP,FN,ACC,acc,roc =  evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels )
+    positives.append(P)
+    negatives.append(N)
+    truePositives.append(TP)
+    trueNegatives.append(TN)
+    falsePositives.append(FP)
+    falseNegatives.append(FN)
+    #sens.append(TPR)
+    #spec.append(SPC)
+    #Dice.append(DSC)
+    accuracy.append(ACC)  # per class
+    total_accuracy.append(acc)
+    auc_roc.append(roc)
+
+    mean_acc = np.average(accuracy, axis=0)
+    mean_total_accuracy = np.average(total_accuracy, axis=0)
+    mean_AUC_ROC = np.nanmean(auc_roc, axis=0)
     
-    mean_accuracy = np.average(accuracy, axis=0)
-    mean_DICE = np.average(f1, axis=0)
-    mean_AUC_ROC = np.average(auc_roc, axis=0)
     
-    my_logger('          Full segmentation evaluation of subject', logfile)
-    my_logger('Mean Accuracy :         ' + str(np.round(mean_accuracy,4)), logfile)
-    my_logger('Mean DICE per class :   ' + str(np.round(mean_DICE,4)), logfile)
-    my_logger('Mean AUC ROC per class: ' + str(np.round(mean_AUC_ROC, 4)), logfile)
+    sumTP = np.sum(truePositives,0)
+    sumTN = np.sum(trueNegatives,0)
+    sumP = np.sum(positives,0)
+    sumN = np.sum(negatives,0)
+    sumFP = np.sum(falsePositives,0)
+    sumFN = np.sum(falseNegatives,0)    
+
+    total_sens = np.divide(np.array(sumTP,dtype='float32'),np.array(sumP,dtype='float32'))
+    total_spec = np.divide(np.array(sumTN,dtype='float32'),np.array(sumN,dtype='float32'))
+    total_precision = np.divide(np.array(sumTP,dtype='float32'),(np.array(sumTP,dtype='float32') + np.array(sumFP,dtype='float32')))
+    total_DSC = np.divide(2*np.array(sumTP,dtype='float64'),(2 * np.array(sumTP,dtype='float64') + np.array(sumFP,dtype='float64') + np.array(sumFN,dtype='float64')))
     
     if(saveSegmentation):
     
@@ -574,11 +613,9 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
         i = 0
         for x,y,z in voxelCoordinates:
             
-            head[x:x+9,y:y+9,z:z+9] = indexes[i]
+            head[x-4:x+5,y-4:y+5,z-4:z+5] = indexes[i]
             i = i+1
-            #print(i)
-            #print(x,y,z)
-    
+
         img = nib.Nifti1Image(head, affine)
         nib.save(img, os.path.join('/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz'))
         my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz', logfile)
@@ -589,7 +626,7 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     #print('Total egmentation on subject took seconds:')
     #print(round(time.time()-t1,2))
     
-    return mean_accuracy, list(mean_DICE), list(mean_AUC_ROC)
+    return total_sens, total_spec, total_DSC, mean_acc, mean_total_accuracy, mean_AUC_ROC, total_precision
 
 # calculate AUC as well as another metric
 
@@ -600,8 +637,8 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
 def evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_labels ):
 
     # Add classes to fullfill requisites for F1 
-    tmp = list(class_pred[-1][-1][-1][0:output_classes]) # store original values
-    class_pred[-1][-1][-1][0:output_classes] = [u for u in range(output_classes)]
+    #tmp = list(class_pred[-1][-1][-1][0:output_classes]) # store original values
+    #class_pred[-1][-1][-1][0:output_classes] = [u for u in range(output_classes)]
     newlist = [u for u in class_pred for u in u]
     newlist = [u for u in newlist for u in u]
     newlist = [u for u in newlist for u in u]
@@ -615,14 +652,12 @@ def evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_lab
     newlist = np.array(newlist)
     y_true = newlist
     
+    P,N,TP,TN,FP,FN,ACC = stats(y_pred, y_true, output_classes)
     # if normalize = True, same as hamming_score. Just a summarized accuracy for all labels.
     acc = metrics.accuracy_score(y_true, y_pred, normalize=True, sample_weight=None)
-    f1 = metrics.f1_score(y_true, y_pred, labels=[u for u in range(output_classes)], average=None, sample_weight=None)
     
     # add one class to be able to compute AUC ROC
-
-    y_true[-output_classes:len(y_true)] = [u for u in range(output_classes)] # replace with classes.
-    
+    #y_true[-output_classes:len(y_true)] = [u for u in range(output_classes)] # replace with classes.
     newlist = [u for u in prediction for u in u]
     newlist = [u for u in newlist for u in u]
     newlist = [u for u in newlist for u in u]
@@ -631,17 +666,104 @@ def evaluation_metrics(class_pred, prediction, output_classes, miniTestbatch_lab
     y_true = to_categorical(y_true.astype(int),output_classes)
     "roc_auc_score needs inputs as arrays of shape (n_samples , n_classes), y_score is the output probs of the softmax layer, and both y_true and y_score are one-hot-encoded"
     "There need to be at least one present class in the sample. Not defined if a class is never present in the sample"
-    roc = metrics.roc_auc_score(y_true, y_score, average=None, sample_weight=None)
-    
-    coverage = metrics.coverage_error(y_true, y_score, sample_weight=None)
-    label_ranking_loss = metrics.label_ranking_loss(y_true, y_score, sample_weight=None)
+    try:
+        roc = metrics.roc_auc_score(y_true, y_score, average=None, sample_weight=None)
+    except ValueError:
+        roc = np.array([np.nan]*(output_classes))
+    #coverage = metrics.coverage_error(y_true, y_score, sample_weight=None)
+    #label_ranking_loss = metrics.label_ranking_loss(y_true, y_score, sample_weight=None)
     
     # restore to original values, to avoid weird grid patterns in segmentation output. As this alterns globally the outout.
-    class_pred[-1][-1][-1][0:output_classes] = tmp
+    #class_pred[-1][-1][-1][0:output_classes] = tmp
+    
+    return P,N,TP,TN,FP,FN,ACC,acc,roc#, coverage, label_ranking_loss
 
-    return acc, f1, roc, coverage, label_ranking_loss
 
-"FOR ACCURACIES PER LABEL, ITERATE FOR EACH LABEL AND STORE BINARY ACCURACY"
+
+def stats(y_pred, y_true, output_classes):
+    P = []
+    N = []
+    TP = []
+    TN = []
+    FP = []
+    FN = []
+    TPR = []
+    SPC = []
+    DSC = []
+    ACC = []
+
+    for c in range(output_classes):
+        tmp_pred = y_pred == c
+        tmp_true = y_true == c
+        p = sum(tmp_true)
+        n = sum(np.invert(tmp_true))
+        tp = sum(tmp_pred * tmp_true)
+        tn = sum(np.invert(tmp_pred)*np.invert(tmp_true))
+        fp = sum(tmp_pred * np.invert(tmp_true))
+        fn = sum(np.invert(tmp_pred) * tmp_true)
+        a = sum(tmp_true == tmp_pred)/float(len(tmp_pred))
+        '''
+        if p:
+            tpr = tp/float(p)
+        else:
+            tpr = np.nan
+
+        if n:
+            spc = tn/float(n)
+        else:
+            spc = np.nan
+        try:
+            dsc = 2*tp/float(2*tp+fp+fn)
+        except ZeroDivisionError:
+            dsc = np.nan'''
+        P.append(p)
+        N.append(n)
+        TP.append(tp)
+        TN.append(tn)
+        FP.append(fp)
+        FN.append(fn)
+        #TPR.append(tpr)
+        #SPC.append(spc)
+        #DSC.append(dsc)
+        ACC.append(a)
+        
+        # Foreground
+    tmp_pred = y_pred > 0
+    tmp_true = y_true > 0
+    p = sum(tmp_true)
+    n = sum(np.invert(tmp_true))
+    tp = sum(tmp_pred * tmp_true)
+    tn = sum(np.invert(tmp_pred)*np.invert(tmp_true))
+    fp = sum(tmp_pred * np.invert(tmp_true))
+    fn = sum(np.invert(tmp_pred) * tmp_true)
+    a = sum(tmp_true == tmp_pred)/float(len(tmp_pred))
+    '''
+    if p:
+        tpr = tp/float(p)
+    else:
+        tpr = np.nan
+    if n:
+        spc = tn/float(n)
+    else:
+        spc = np.nan
+    try:
+        dsc = 2*tp/float(2*tp+fp+fn)
+    except ZeroDivisionError:
+        dsc = np.nan
+    '''
+    P.append(p)
+    N.append(n)
+    TP.append(tp)
+    TN.append(tn)
+    FP.append(fp)
+    FN.append(fn)
+    #TPR.append(tpr)
+    #SPC.append(spc)
+    #DSC.append(dsc)
+    ACC.append(a)
+    
+    return P,N,TP,TN,FP,FN,ACC#TPR,SPC,DSC,ACC
+    
 
 def hamming_score(y_true, y_pred, normalize=True, sample_weight=None):
     '''
@@ -728,3 +850,48 @@ def plotTraining(train_performance, val_performance, window_size=1, savePlot=Fal
     plt.legend(('train set', 'validation set'))
     if savePlot:
         matplotlib.pyplot.savefig(logfile + '_Training.png')
+        
+        
+def dice_completeImages(img1,img2):
+    return(2*np.sum(np.multiply(img1>0,img2>0))/float(np.sum(img1>0)+np.sum(img2>0)))
+
+
+
+def dice_coef(y_true, y_pred, smooth=1):
+    """
+    Dice = (2*|X & Y|)/ (|X|+ |Y|)
+         =  2*sum(|A*B|)/(sum(A^2)+sum(B^2))
+    ref: https://arxiv.org/pdf/1606.04797v1.pdf
+    """
+    intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
+    return (2. * intersection + smooth) / (K.sum(K.square(y_true),-1) + K.sum(K.square(y_pred),-1) + smooth)
+
+def dice_coef_loss(y_true, y_pred):
+    return 1-dice_coef(y_true, y_pred)
+
+
+
+def normalizeMRI(data):
+    
+    #img = nib.load('/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/HGG/brats_2013_pat0001_1/VSD.Brain.XX.O.MR_Flair.54512/VSD.Brain.XX.O.MR_Flair.54512.nii')
+    #data = img.get_data()
+    data1 = np.ma.masked_array(data, data==0)
+    m = data1.mean()
+    s = data1.std()
+    data1 = (data1 - m)/s
+    '''
+    nonzero = data > 0
+    brain = data[nonzero]
+    m = np.mean(brain)
+    s = np.std(brain)
+    data1 = data.reshape((1,data.shape[0]*data.shape[1]*data.shape[2]))
+    #data1.shape
+    for i in range(data1.shape[1]):
+        if data1[0][i] != 0:
+            data1[0][i] = (data1[0][i] - m) / float(s)
+    data1 = data1.reshape((data.shape[0],data.shape[1],data.shape[2]))
+    '''
+    data1 = np.ma.getdata(data1)
+
+
+    return(data1)

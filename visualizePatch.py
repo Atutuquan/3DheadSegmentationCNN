@@ -15,7 +15,7 @@ import nibabel as nib
 #batch, labels = extractPatches(filename,labelsFileName, n_patches = 1, n_subjects = 1, dpatch = 190, output_classes=2)
 
 # Dimensions:  batch (number patches, axial , sagittal, coronal, channels)
-image = mask[:,150,:]
+image = patches[2550,10,0:50,0:50,1]
 img = smp.toimage( image )       # Create a PIL image
 img.show()                      # View in default viewer
 img

@@ -1,0 +1,52 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Feb 14 19:02:37 2018
+
+@author: lukas
+"""
+
+
+# Need to write pipe to normalize ALL images
+
+# OR normalize when loading?
+
+# Do I then need to normalize test data. Of course
+
+import nibabel as nib
+import numpy as np
+
+
+def normalizeMRI(data):
+    
+    img = nib.load('/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/HGG/brats_2013_pat0001_1/VSD.Brain.XX.O.MR_Flair.54512/VSD.Brain.XX.O.MR_Flair.54512.nii')
+    data = img.get_data()
+
+    data1 = np.ma.masked_array(data, data==0)
+    m = data1.mean()
+    s = data1.std()
+   
+    data1 = (data1 - m)/s
+
+
+
+    data1 = data.reshape((1,data.shape[0]*data.shape[1]*data.shape[2]))
+    
+    
+    data1.shape
+    
+    for i in range(data1.shape[1]):
+        if data1[0][i] != 0:
+            data1[0][i] = (data1[0][i] - m) / float(s)
+            
+    data1 = data1.reshape((data.shape[0],data.shape[1],data.shape[2]))
+    return(data1)
+
+
+brain1 = data1[nonzero] # use same nonzero index because some nonzero values before might be zero after normalization
+
+np.mean(brain1)
+np.std(brain1)
+
+img1 = nib.Nifti1Image(data1, img.affine)
+nib.save(img1, '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/HGG/brats_2013_pat0001_1/VSD.Brain.XX.O.MR_Flair.54512/VSD.Brain.XX.O.MR_Flair.54512_NORM.nii')

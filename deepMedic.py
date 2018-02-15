@@ -8,8 +8,10 @@ Created on Wed Dec  6 13:58:48 2017
 import os
 import time
 from model import DeepMedic
-from helpers import sampleTrainData, fullHeadSegmentation, my_logger, classesInSample, plotTraining, getClassProportions
+from tiny_DeepMedic import tiny_DeepMedic
+from helpers import sampleTrainData, fullHeadSegmentation, my_logger, classesInSample, plotTraining, getClassProportions, evaluation_metrics
 from random import shuffle
+from random import sample
 from keras.callbacks import ModelCheckpoint#, EarlyStopping, History
 import numpy as np
 from configFile import *   # Get all session parameters
@@ -22,23 +24,28 @@ logfile = 'Output/logs/TrainSession' + dataset + '_DeepMedic' + time.strftime("%
 if dataset == 'BRATS15':
     '''Example data BRATS 2015 - 4 input channels - 5 output classes'''
     
-    trainChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainFlair.cfg',
-                    '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1.cfg',
-                    '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT1c.cfg',
-                    '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainT2.cfg']
-    trainLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/splits/trainGT.cfg'
-
+    trainChannels = ['/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/trainFlair_2018',
+                    '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/trainT1_2018',
+                    '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/trainT1c_2018',
+                    '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/trainT2_2018']
+    trainLabels = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/trainGT_2018'
+    '''
     validationChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valFlair.cfg',
                           '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1.cfg',
                           '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT1c.cfg',
                           '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valT2.cfg']
     validationLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/train/validation/splits/valGT.cfg'
+    '''
+    testChannels = ['/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/testFlair_2018',
+                    '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/testT1_2018',
+                    '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/testT1c_2018',
+                    '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/testT2_2018']
     
-    testChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testFlair.cfg',
-                    '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testT1.cfg',
-                    '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testT1c.cfg',
-                    '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testT2.cfg']
-    testLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicBRATS15/test/splits/testGT.cfg'
+    testLabels = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/testGT_2018'
+    
+    validationChannels = testChannels
+    validationLabels = testLabels
+    
     output_classes = 5 # Including background!!
 
 elif dataset == 'ATLAS17':
@@ -78,13 +85,19 @@ if(usingLoadedData):
 
 ############################## create model ###########################################
         
-np.random.seed(1337) # for reproducibility
+#np.random.seed(1337) # for reproducibility
         
 num_channels = len(trainChannels)
         
 if load_model == False:
-    dm = DeepMedic(dpatch, output_classes, num_channels, L2, dropout, learning_rate, optimizer_decay)
-    model = dm.createModel()
+    
+    if(usingAlternativeModel):
+        dm = tiny_DeepMedic(dpatch, output_classes, num_channels, L2, dropout, learning_rate, optimizer_decay)
+        model = dm.createModel()
+
+    else:
+        dm = DeepMedic(dpatch, output_classes, num_channels, L2, dropout, learning_rate, optimizer_decay)
+        model = dm.createModel()
     print(model.summary())
     train_performance = []
     val_performance = []
@@ -99,10 +112,12 @@ elif load_model == True:
 ############################## train model ###########################################
 
 # OUTCOMMENTED SO I CAN KEEP USING SAME TRAINING DATA FOR SAME MODEL.
-#train_performance = []
-#val_performance = []
+train_performance = []
+val_performance = []
 
 
+
+np.set_printoptions(precision=3)
 
 #allForegroundVoxels = generateAllForegroundVoxels(trainLabels, dpatch)
 l = 0
@@ -115,8 +130,8 @@ my_logger(validationLabels, logfile)
 my_logger(testChannels, logfile) 
 my_logger(testLabels, logfile) 
 my_logger('Session parameters: ', logfile)
-my_logger('[num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod, size_minibatches, list_subjects_fullSegmentation, epochs_for_fullSegmentation, size_test_minibatches]', logfile)
-my_logger([num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod, size_minibatches, list_subjects_fullSegmentation, epochs_for_fullSegmentation, size_test_minibatches], logfile)
+my_logger('[num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod_train, size_minibatches, n_fullSegmentations, epochs_for_fullSegmentation, size_test_minibatches]', logfile)
+my_logger([num_iter, epochs, n_patches, n_patches_val, n_subjects, samplingMethod_train, size_minibatches, n_fullSegmentations, epochs_for_fullSegmentation, size_test_minibatches], logfile)
 my_logger('Dropout for last two fully connected layers: ' + str(dropout), logfile)
 my_logger('Model loss function: ' + str(model.loss), logfile)
 my_logger('Model number of parameters: ' + str(model.count_params()), logfile)
@@ -139,63 +154,117 @@ for epoch in xrange(0,epochs):
     
     for i in range(0, num_iter):
         
-        my_logger("###################################################### Batch " + str(i+1) + "/" + str(num_iter) ,logfile)
+        my_logger("                   Batch " + str(i+1) + "/" + str(num_iter) ,logfile)
+        my_logger("###################################################### ",logfile)
         
         if(usingLoadedData):
             train_performance.append(model.train_on_batch(allBatches[k[i]], allLabels[k[i]]))#, class_weight = class_weight1)
             val_performance.append(model.evaluate(allValBatches[k[i]], allValLabels[k[i]]))
             
         else:
-            valbatch, vallabels = sampleTrainData(validationChannels, validationLabels, n_patches_val, n_subjects_val, dpatch, output_classes, samplingMethod, logfile)
+            valbatch, vallabels = sampleTrainData(validationChannels, validationLabels, n_patches_val, n_subjects_val, dpatch, output_classes, samplingMethod_val, logfile)
             #valbatch1, vallabels1 = sampleTrainData(validationChannels, validationLabels, n_patches_val1, n_subjects, dpatch, output_classes, samplingMethod=0)
-        
-        # VALIDATION ON BATCHES
+            positives = []
+            negatives = []
+            truePositives = []
+            trueNegatives = []
+            falsePositives = []
+            falseNegatives = []
+            sens = []
+            spec = []
+            Dice = []
+            accuracy = []  # per class
+            total_accuracy = []  # as a whole
+            auc_roc = []
+        ############################# VALIDATION ON BATCHES ############################
             start = 0
             n_minibatches = len(valbatch)/size_minibatches_val
             for j in range(0,n_minibatches):
                 print("validation on minibatch " +str(j+1)+ "/" + str(n_minibatches))
                 
-                end = start + size_minibatches
+                end = start + size_minibatches_val
                 minivalbatch = valbatch[start:end,:,:,:,:]    
                 minivalbatch_labels = vallabels[start:end,:,:,:,:]    
                 val_performance.append(model.evaluate(minivalbatch, minivalbatch_labels))
+    
+                #my evaluation
+                #freq = classesInSample(minivalbatch_labels, output_classes)
+                #my_logger("Sampled following number of classes in VALIDATION : " + str(freq), logfile)
+                #my_logger("proportions: " + str(getClassProportions(freq)), logfile)
+                
+                prediction = model.predict(minivalbatch, verbose=0)
+                class_pred = np.argmax(prediction, axis=4)  
+                P,N,TP,TN,FP,FN,ACC,acc,roc =  evaluation_metrics(class_pred, prediction, output_classes, minivalbatch_labels )
+                positives.append(P)
+                negatives.append(N)
+                truePositives.append(TP)
+                trueNegatives.append(TN)
+                falsePositives.append(FP)
+                falseNegatives.append(FN)
+                #sens.append(TPR)
+                #spec.append(SPC)
+                #Dice.append(DSC)
+                accuracy.append(ACC)  # per class
+                total_accuracy.append(acc)
+                auc_roc.append(roc)
                 start = end
                 my_logger('Validation cost and accuracy ' + str(val_performance[-1]),logfile) 
-                
-               
+                 
             del valbatch
             del vallabels
                 
-            batch, labels = sampleTrainData(trainChannels,trainLabels, n_patches, n_subjects, dpatch, output_classes, samplingMethod, logfile)
+            sumTP = np.sum(truePositives,0)
+            sumTN = np.sum(trueNegatives,0)
+            sumP = np.sum(positives,0)
+            sumN = np.sum(negatives,0)
+            sumFP = np.sum(falsePositives,0)
+            sumFN = np.sum(falseNegatives,0)    
+            
+            total_sens = np.divide(np.array(sumTP,dtype='float32'),np.array(sumP,dtype='float32'))
+            total_spec = np.divide(np.array(sumTN,dtype='float32'),np.array(sumN,dtype='float32'))
+            total_precision = np.divide(np.array(sumTP,dtype='float32'),(np.array(sumTP,dtype='float32') + np.array(sumFP,dtype='float32')))
+            NPV = np.divide(np.array(sumTN,dtype='float32'),(np.array(sumTN,dtype='float32') + np.array(sumFN,dtype='float32')))
+           
+            total_DSC = np.divide(2*np.array(sumTP,dtype='float64'),(2 * np.array(sumTP,dtype='float64') + np.array(sumFP,dtype='float64') + np.array(sumFN,dtype='float64')))
+             
+            mean_acc = np.average(accuracy, axis=0)
+            mean_total_accuracy = np.average(total_accuracy, axis=0)
+            mean_AUC_ROC = np.average(auc_roc, axis=0)
+            
+            my_logger('--------------- VALIDATION EVALUATION ---------------', logfile)
+            my_logger('Mean Accuracy :' + str(np.round(mean_total_accuracy,4)) + ' => Correctly-Classified-Voxels/All-Predicted-Voxels = ' + str(np.sum([x[:-1] for x in truePositives]) + np.sum([x[:-1] for x in trueNegatives])) + '/' + str(np.sum([x[:-1] for x in positives]) + np.sum([x[:-1] for x in negatives])) , logfile)
+            my_logger('Per class Accuracy :            ' + str(np.round(mean_acc,4)), logfile)
+            my_logger('Per class Sensitivity :         ' + str(np.round(total_sens,4)), logfile)
+            my_logger('Per class Specificity :         ' + str(np.round(total_spec,4)), logfile)
+            my_logger('Per class Precision :           ' + str(np.round(total_precision,4)), logfile)
+            my_logger('Negative predictive value :     ' + str(np.round(NPV,4)), logfile)
+            my_logger('Per class DCS :                 ' + str(np.round(total_DSC,4)), logfile)
+            my_logger('Per class  AUC-ROC :            ' + str(np.round(mean_AUC_ROC, 4)), logfile)
+            
+            
+            ####################### TRAINING ON BATCHES ##############################
+            
+            batch, labels = sampleTrainData(trainChannels,trainLabels, n_patches, n_subjects, dpatch, output_classes, samplingMethod_train, logfile)
             
             shuffleOrder = np.arange(batch.shape[0])
             np.random.shuffle(shuffleOrder)
             batch = batch[shuffleOrder]
             labels = labels[shuffleOrder]
-            
             #freq = classesInSample(labels, output_classes)
-            
             #my_logger("Sampled following number of classes in training batch: " + str(freq), logfile)
-            
             #print(getClassProportions(freq))
-            
-        # TRAINING ON BATCHES
             start = 0
             n_minibatches = len(batch)/size_minibatches
             for j in range(0,n_minibatches):
                 print("training on minibatch " +str(j+1)+ "/" + str(n_minibatches))
-                
                 end = start + size_minibatches
                 minibatch = batch[start:end,:,:,:,:]    
                 minibatch_labels = labels[start:end,:,:,:,:]   
-                
                 #freq = classesInSample(minibatch_labels, output_classes)
-                #my_logger("Sampled following number of classes in training MINIBATCH: " + str(smpl), logfile)
+                #my_logger("Sampled following number of classes in training MINIBATCH: " + str(freq), logfile)
                 #print(getClassProportions(freq))
-                
                 train_performance.append(model.train_on_batch(minibatch, minibatch_labels))#, class_weight = class_weight))
                 start = end
-            #my_logger(str(i) + '/' + str(num_iter),logfile)
                 my_logger('Train cost and accuracy      ' + str(train_performance[-1]),logfile)
                 
             del batch
@@ -208,9 +277,29 @@ for epoch in xrange(0,epochs):
         my_logger("                 FULL HEAD SEGMENTATION", logfile)
         my_logger("------------------------------------------------------", logfile)
         test_performance = []
-        for subjectIndex in list_subjects_fullSegmentation:
-            fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, logfile,epoch, saveSegmentation)
-        #my_logger('--------------- TEST EVALUATION ---------------', logfile)
+        list_subjects_fullSegmentation = sample(range(test_subjects),n_fullSegmentations)
+        statistics = []
+        for subjectIndex in list_subjects_fullSegmentation: 
+            mean_sens, mean_spec, mean_DICE, mean_acc, mean_total_accuracy, mean_AUC_ROC, total_precision = fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, logfile,epoch, saveSegmentation)
+            my_logger('--------------- TEST EVALUATION ---------------', logfile)
+            my_logger('          Full segmentation evaluation of subject' + str(subjectIndex), logfile)
+            my_logger('Mean Accuracy :' + str(np.round(mean_total_accuracy,4)) + ' => Correctly-Classified-Voxels/All-Predicted-Voxels = ' + str(np.sum([x[:-1] for x in truePositives]) + np.sum([x[:-1] for x in trueNegatives])) + '/' + str(np.sum([x[:-1] for x in positives]) + np.sum([x[:-1] for x in negatives])) , logfile)
+            my_logger('Per class Accuracy :            ' + str(np.round(mean_acc,4)), logfile)
+            my_logger('Per class Specificity :         ' + str(np.round(mean_spec,4)), logfile)
+            my_logger('Per class Sensitivity :         ' + str(np.round(mean_sens,4)), logfile)
+            my_logger('Per class Precision :           ' + str(np.round(total_precision,4)), logfile)
+            my_logger('Per class DCS :                 ' + str(np.round(mean_DICE,4)), logfile)
+            my_logger('Per class  AUC-ROC :            ' + str(np.round(mean_AUC_ROC, 4)), logfile)
+            statistics.append([mean_sens, mean_spec, mean_DICE, mean_acc, mean_total_accuracy, mean_AUC_ROC, total_precision])
+        statistics_mean = np.mean(statistics,0)
+        my_logger('         FULL SEGMENTATION SUMMARY STATISTICS ', logfile)
+        my_logger('Mean Accuracy:                         ' + str(statistics_mean[4]), logfile)
+        my_logger('Overall Accuracy:                      ' + str(statistics_mean[3]), logfile)
+        my_logger('Overall Specificity:                   ' + str(statistics_mean[1]), logfile)
+        my_logger('Overall Sensitivity:                   ' + str(statistics_mean[0]), logfile)
+        my_logger('Overall Precision:                     ' + str(statistics_mean[6]), logfile)
+        my_logger('Overall DCS:                           ' + str(statistics_mean[2]), logfile)
+        my_logger('Overall AUC-ROC:                       ' + str(statistics_mean[5]), logfile)
         #my_logger(np.average(test_performance,axis=0),logfile)
 #https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model
 
@@ -222,4 +311,5 @@ for epoch in xrange(0,epochs):
 
 ############################# plot ##################################################
 
-plotTraining(train_performance, val_performance,window_size=1)
+plotTraining(train_performance, val_performance,window_size=1000)
+
