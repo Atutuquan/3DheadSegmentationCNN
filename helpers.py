@@ -235,7 +235,7 @@ def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patc
             
             img_data = np.array(proxy_img.get_data(),dtype='int16')
             
-            img_data = normalizeMRI(img_data)
+            #img_data = normalizeMRI(img_data)
             
             for j in xrange(0,len(voxelCoordinates[i])):     
                 D1,D2,D3 = voxelCoordinates[i][j]        
@@ -256,7 +256,7 @@ def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patc
         proxy_img = nib.load(subject)
         img_data = np.array(proxy_img.get_data(),dtype='int16')
         
-        img_data = normalizeMRI(img_data)
+        #img_data = normalizeMRI(img_data)
         
         for i in xrange(0,len(voxelCoordinates[0])):
             
@@ -533,7 +533,22 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
     total_accuracy = []  # as a whole
     auc_roc = []
     
+    flairCh = getSubjectsToSample(testChannels[0], subjectIndex)
+    subID = flairCh[0][-13:-8]
+    "EXTRACT SUBJECT ID FROM FLAIR CHANNEL -LAST 5 DIGITS BEFORE .NII.GZ-. STORE AND USE FOR CORRECT NAMING OF SEGMENTED OUTPUT"
+    
+    '''here are 3 requirements for the successfull upload and validation of your segmentation:
 
+    Use the MHA filetype to store your segmentations (not mhd) [use short or ushort if you experience any upload problems]
+    Keep the same labels as the provided truth.mha (see above)
+    Name your segmentations according to this template: VSD.your_description.###.mha
+
+    replace the ### with the ID of the corresponding Flair MR images. This allows the system to relate your segmentation to the correct training truth. Download an example list for the training data and testing data.
+    '''
+
+    "STORE IMAGE AS MHA. CONVERT EXTERNALLY IF NECESSARY, using c3d from terminal, just like I did to convert to nii"
+    "CAN USE SIMPLEITK TO CONVERT DATA IN PYTHON"
+    "https://stackoverflow.com/questions/29738822/how-to-convert-mha-file-to-nii-file-in-python-without-using-medpy-or-c"
     
     batch, labels, voxelCoordinates, shape, affine = sampleTestData(testChannels, testLabels, subjectIndex, output_classes, dpatch,logfile)
     print("Extracted image patches for full head segmentation")
@@ -617,8 +632,11 @@ def fullHeadSegmentation(model, testChannels, testLabels, subjectIndex, output_c
             i = i+1
 
         img = nib.Nifti1Image(head, affine)
-        nib.save(img, os.path.join('/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz'))
-        my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + logfile[12:] +'fullHeadSegmentation_subjIndex' +  str(subjectIndex[0]) + '_epoch' +str(epoch)+ '.nii.gz', logfile)
+        
+        segmentationName = 'VSD.' + logfile[12:] + '.' + subID
+        
+        nib.save(img, os.path.join('/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + segmentationName + '.nii.gz'))
+        my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + segmentationName + '.nii.gz', logfile)
     #p = p+1
     #print(subjectIndex)
     # print(test_performance[-1])
@@ -803,59 +821,10 @@ def movingAverageConv(a, window_size=1) :
         divisorArr = np.asarray(range(1, slotsWithIncompleteConvolution+1, 1), dtype=float)
         result[ : slotsWithIncompleteConvolution] = result[ : slotsWithIncompleteConvolution] / divisorArr
     return result
-
-def plotTraining(train_performance, val_performance, window_size=1, savePlot=False):
-    import matplotlib.pyplot as plt
-    plt.clf()
-    plt.subplot(211)
-    ax = plt.gca()
-
-    t0 = [row[0] for row in train_performance]
-    v0 = [row[0] for row in val_performance]
-    
-    t0 = movingAverageConv(t0, window_size)
-    v0 = movingAverageConv(v0, window_size)
-    
-    plt.plot(range(len(t0)),t0,'b-')
-    plt.plot(range(0,len(t0),(len(t0)/len(v0))+1),v0[:-8],'r-')
-    #plt.plot(range(0,len(t0),(len(t0)/len(v0))),v0,'r-')
-    plt.show()
-    
-    
-    #plt.plot(range(0,len(t0)),t0,'-',v0)#,'-',vl01,'-')
-    #ax.plot( np.concatenate((train_performance[:,[0]], val_performance[:,[0]]),1))
-    plt.xlabel('weight updates')
-    plt.ylabel('loss')
-    plt.axis('tight')
-    plt.legend(('train set', 'validation set','uniform sample validation set'))
-    plt.subplot(212)
-    ax = plt.gca()
-    t1 = [row[1] for row in train_performance]
-    v1 = [row[1] for row in val_performance]
-    #v01 = [row[1] for row in val1_performance]
-    
-    t1 = movingAverageConv(t1, window_size)
-    v1 = movingAverageConv(v1, window_size)
-    
-    plt.plot(range(len(t1)),t1,'b-')
-    plt.plot(range(0,len(t1),(len(t1)/len(v1))+1),v1[:-8],'r-')
-    #plt.plot(range(0,len(t1),(len(t1)/len(v1))),v1,'r-')
-    plt.show()
-    
-    #plt.plot(range(0,len(t1)),t1,'-',v1)#,'-',v01,'-')
-    #ax.plot( np.concatenate((train_performance[:,[1]], val_performance[:,[1]]),1))
-    plt.xlabel('weight updates')
-    plt.ylabel('accuracy')
-    plt.axis('tight')
-    plt.legend(('train set', 'validation set'))
-    if savePlot:
-        matplotlib.pyplot.savefig(logfile + '_Training.png')
         
         
 def dice_completeImages(img1,img2):
     return(2*np.sum(np.multiply(img1>0,img2>0))/float(np.sum(img1>0)+np.sum(img2>0)))
-
-
 
 def dice_coef(y_true, y_pred, smooth=1):
     """
@@ -870,28 +839,15 @@ def dice_coef_loss(y_true, y_pred):
     return 1-dice_coef(y_true, y_pred)
 
 
-
 def normalizeMRI(data):
-    
     #img = nib.load('/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/HGG/brats_2013_pat0001_1/VSD.Brain.XX.O.MR_Flair.54512/VSD.Brain.XX.O.MR_Flair.54512.nii')
     #data = img.get_data()
     data1 = np.ma.masked_array(data, data==0)
     m = data1.mean()
     s = data1.std()
     data1 = (data1 - m)/s
-    '''
-    nonzero = data > 0
-    brain = data[nonzero]
-    m = np.mean(brain)
-    s = np.std(brain)
-    data1 = data.reshape((1,data.shape[0]*data.shape[1]*data.shape[2]))
-    #data1.shape
-    for i in range(data1.shape[1]):
-        if data1[0][i] != 0:
-            data1[0][i] = (data1[0][i] - m) / float(s)
-    data1 = data1.reshape((data.shape[0],data.shape[1],data.shape[2]))
-    '''
     data1 = np.ma.getdata(data1)
-
-
     return(data1)
+    
+    
+    

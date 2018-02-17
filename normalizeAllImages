@@ -1,0 +1,50 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Feb 16 16:48:15 2018
+
+@author: lukas
+"""
+
+import nibabel as nib
+from helpers import normalizeMRI
+
+
+Channels = ['/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/flairChannels',
+            '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/t1cChannels',
+            '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/t1Channels',
+            '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/t2Channels']
+'''
+Channels = ['/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/flairChannels',
+            '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/t1cChannels',
+            '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/t1Channels',
+            '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/t2Channels']
+'''
+
+for modality in range(len(Channels)):
+    
+    fp = open(Channels[modality])
+    lines = fp.readlines()
+    print(modality)
+    
+    for subject in range(len(lines)):
+        print(subject)
+        
+        # Normalization of only brain tissue (actually, only > background tissue, can also leave some brain tissue out)
+        name = lines[subject][:-1]
+        img = nib.load(name)
+        data = img.get_data()
+        data1 = normalizeMRI(data)
+        img = nib.Nifti1Image(data1, img.affine)
+        nib.save(img, name )
+        '''
+        # Normalization of whole image
+        name = lines[subject][:-1]
+        img = nib.load(name)
+        data = img.get_data()
+        m = data.mean()
+        s = data.std()
+        data1 = (data - m)/s
+        img = nib.Nifti1Image(data1, img.affine)
+        nib.save(img, name )
+        '''
