@@ -851,3 +851,165 @@ def normalizeMRI(data):
     
     
     
+def sampleTestData2(testChannels, testLabels, subjectIndex, output_classes, dpatch,logfile):
+    "output should be a batch containing all (non-overlapping) image patches of the whole head, and the labels"
+    "Actually something like sampleTraindata, thereby inputting extractImagePatch with all voxels of a subject"
+    "Voxel coordinates start at index [26] and then increase by 17 in all dimensions."    
+    
+    if len(testLabels) == 0:
+        
+        num_channels = len(testChannels)
+        labelsFile = open(testChannels[0],"r")   
+        ch = labelsFile.readlines()
+        subjectGTchannel = ch[subjectIndex[0]][:-1]
+        my_logger('Segmenting subject with FLAIR channel: ' + str(subjectGTchannel), logfile)
+        labelsFile.close()      
+        proxy_img = nib.load(subjectGTchannel)
+        shape = proxy_img.shape
+        affine = proxy_img.affine
+            
+        xend = shape[0]-26
+        yend = shape[1]-26
+        zend = shape[2]-26
+    
+        voxelCoordinates = []
+        for x in range(26,xend,9):
+            for y in range(26,yend,9):
+                for z in range(26,zend,9):
+                    voxelCoordinates.append([x,y,z])
+        
+        n_patches = len(voxelCoordinates)
+        patches = np.zeros((n_patches,dpatch,dpatch,dpatch,num_channels),dtype='int8')
+        
+        
+        for i in xrange(0,len(testChannels)):
+            patches[:,:,:,:,i] = extractImagePatch(testChannels[i], subjectIndex, patches, [voxelCoordinates], n_patches, dpatch, debug=False)
+                         
+        labels = []
+        #print("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s")
+        return patches, labels, voxelCoordinates, shape, affine
+        
+    
+    
+    else:
+        num_channels = len(testChannels)
+        labelsFile = open(testChannels[0],"r")   
+        ch = labelsFile.readlines()
+        subjectGTchannel = ch[subjectIndex[0]][:-1]
+        my_logger('Segmenting subject with FLAIR channel: ' + str(subjectGTchannel), logfile)
+        labelsFile.close()      
+        proxy_img = nib.load(subjectGTchannel)
+        shape = proxy_img.shape
+        affine = proxy_img.affine
+            
+        xend = shape[0]-26
+        yend = shape[1]-26
+        zend = shape[2]-26
+    
+        voxelCoordinates = []
+        for x in range(26,xend,9):
+            for y in range(26,yend,9):
+                for z in range(26,zend,9):
+                    voxelCoordinates.append([x,y,z])
+        
+        n_patches = len(voxelCoordinates)
+        patches = np.zeros((n_patches,dpatch,dpatch,dpatch,num_channels),dtype='int8')
+        
+        
+        for i in xrange(0,len(testChannels)):
+            patches[:,:,:,:,i] = extractImagePatch(testChannels[i], subjectIndex, patches, [voxelCoordinates], n_patches, dpatch, debug=False)
+                         
+        
+        labels = []
+        #print("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s")
+        return patches, labels, voxelCoordinates, shape, affine
+
+
+def fullHeadSegmentation2(dice_compare, dsc, model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, epoch, saveSegmentation = False):    
+    subjectIndex = [subjectIndex]
+    
+    
+    flairCh = getSubjectsToSample(testChannels[0], subjectIndex)
+    subID = flairCh[0][-13:-8]
+    "EXTRACT SUBJECT ID FROM FLAIR CHANNEL -LAST 5 DIGITS BEFORE .NII.GZ-. STORE AND USE FOR CORRECT NAMING OF SEGMENTED OUTPUT"
+    
+    '''here are 3 requirements for the successfull upload and validation of your segmentation:
+
+    Use the MHA filetype to store your segmentations (not mhd) [use short or ushort if you experience any upload problems]
+    Keep the same labels as the provided truth.mha (see above)
+    Name your segmentations according to this template: VSD.your_description.###.mha
+
+    replace the ### with the ID of the corresponding Flair MR images. This allows the system to relate your segmentation to the correct training truth. Download an example list for the training data and testing data.
+    '''
+
+    "STORE IMAGE AS MHA. CONVERT EXTERNALLY IF NECESSARY, using c3d from terminal, just like I did to convert to nii"
+    "CAN USE SIMPLEITK TO CONVERT DATA IN PYTHON"
+    "https://stackoverflow.com/questions/29738822/how-to-convert-mha-file-to-nii-file-in-python-without-using-medpy-or-c"
+    
+    batch, labels, voxelCoordinates, shape, affine = sampleTestData2(testChannels, testLabels, subjectIndex, output_classes, dpatch,logfile)
+    print("Extracted image patches for full head segmentation")
+    
+    start = 0
+    n_minibatches = len(batch)/size_minibatches
+    indexes = []
+    for j in range(0,n_minibatches):
+        print("training on minibatch " +str(j)+ "/" + str(n_minibatches))
+        end = start + size_minibatches
+        miniTestbatch = batch[start:end,:,:,:,:]    
+                
+        prediction = model.predict(miniTestbatch, verbose=0)
+        class_pred = np.argmax(prediction, axis=4)
+        indexes.extend(class_pred)        
+
+        start = end
+        
+    
+    #last one
+    end = start + (len(voxelCoordinates)-n_minibatches*size_minibatches)
+    miniTestbatch = batch[start:end,:,:,:,:]    
+    
+    prediction = model.predict(miniTestbatch, verbose=0)
+    class_pred = np.argmax(prediction, axis=4)
+    indexes.extend(class_pred)            
+    #test_performance.append(model.evaluate(miniTestbatch, miniTestbatch_labels, verbose=0))
+    
+    
+    if(saveSegmentation):
+    
+        head = np.zeros(shape, dtype=np.int16)  # same size as input head, start index for segmentation start at 26,26,26, rest filled with zeros....
+        i = 0
+        for x,y,z in voxelCoordinates:
+            
+            head[x-4:x+5,y-4:y+5,z-4:z+5] = indexes[i]
+            i = i+1
+
+        img = nib.Nifti1Image(head, affine)
+        
+        if dice_compare:
+            
+            labelsFile = open(testLabels,"r")   
+            ch = labelsFile.readlines()
+            subjectGTchannel = ch[subjectIndex[0]][:-1]
+            GT = nib.load(subjectGTchannel)  
+            dsc.append(dice_completeImages(img.get_data(), GT.get_data()))
+            print(dsc[-1])
+            print('mean DCS so far:' + str(np.mean(np.round(dsc,2))))
+        segmentationName = 'VSD.' + logfile[12:] + '.' + subID
+        
+        nib.save(img, '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + segmentationName + '.nii.gz')
+        
+        
+        #out = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + segmentationName + '.mha'
+        #hdr = img.header
+        #data = img.get_data()
+        #medpy.io.save(data, out, hdr )
+        
+        
+        my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + segmentationName + '.nii.gz', logfile)
+    #p = p+1
+    #print(subjectIndex)
+    # print(test_performance[-1])
+    # print("Mean test performance: " + str(np.mean(test_performance,axis=0)))
+    #print('Total egmentation on subject took seconds:')
+    #print(round(time.time()-t1,2))
+        

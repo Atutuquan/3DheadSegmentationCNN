@@ -8,16 +8,30 @@ Created on Fri Feb 16 11:27:14 2018
 
 import nibabel as nib
 import numpy as np
+import medpy
+from helpers import dice_completeImages, getSubjectsToSample, extractImagePatch, extractLabels
+
+
+#===============================
+'''
+from keras.models import load_model  
+model = load_model(path_to_model)
+logfile = 'Output/logs/'  + logfile_model
+'''
+
 
 #=========================================================================================================
 '''BRATS 2015 TEST SET'''
+'''
+testChannels = ['/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testFlair_2018',
+                '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testT1_2018',
+                '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testT1c_2018',
+                '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testT2_2018']
+testLabels = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testGT_2018'
+'''
 
-testChannels = ['/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testFlair',
-                '/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testT1',
-                '/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testT1c',
-                '/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testT2']
-testLabels = []
-
+testChannels = trainChannels
+testLabels = trainLabels
 #=========================================================================================================
 
   
@@ -59,12 +73,14 @@ def sampleTestData2(testChannels, testLabels, subjectIndex, output_classes, dpat
         #print("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s")
         return patches, labels, voxelCoordinates, shape, affine
         
+    
+    
     else:
         num_channels = len(testChannels)
-        labelsFile = open(testLabels,"r")   
+        labelsFile = open(testChannels[0],"r")   
         ch = labelsFile.readlines()
         subjectGTchannel = ch[subjectIndex[0]][:-1]
-        my_logger('Segmenting subject with GT channel: ' + str(subjectGTchannel), logfile)
+        my_logger('Segmenting subject with FLAIR channel: ' + str(subjectGTchannel), logfile)
         labelsFile.close()      
         proxy_img = nib.load(subjectGTchannel)
         shape = proxy_img.shape
@@ -87,13 +103,13 @@ def sampleTestData2(testChannels, testLabels, subjectIndex, output_classes, dpat
         for i in xrange(0,len(testChannels)):
             patches[:,:,:,:,i] = extractImagePatch(testChannels[i], subjectIndex, patches, [voxelCoordinates], n_patches, dpatch, debug=False)
                          
-        labels = np.array(extractLabels(testLabels, subjectIndex, [voxelCoordinates], dpatch))
-        labels = to_categorical(labels.astype(int),output_classes)
+        
+        labels = []
         #print("Finished extracting " + str(n_patches) + " patches, from "  + str(n_subjects) + " subjects and " + str(num_channels) + " channels. Timing: " + str(round(end-start,2)) + "s")
         return patches, labels, voxelCoordinates, shape, affine
 
 
-def fullHeadSegmentation2(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, epoch, saveSegmentation = False):    
+def fullHeadSegmentation2(dice_compare, dsc, model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_minibatches,logfile, epoch, saveSegmentation = False):    
     subjectIndex = [subjectIndex]
     
     
@@ -153,9 +169,26 @@ def fullHeadSegmentation2(model, testChannels, testLabels, subjectIndex, output_
 
         img = nib.Nifti1Image(head, affine)
         
+        if dice_compare:
+            
+            labelsFile = open(testLabels,"r")   
+            ch = labelsFile.readlines()
+            subjectGTchannel = ch[subjectIndex[0]][:-1]
+            GT = nib.load(subjectGTchannel)  
+            dsc.append(dice_completeImages(img.get_data(), GT.get_data()))
+            print(dsc[-1])
+            print('mean DCS so far:' + str(np.mean(np.round(dsc,2))))
         segmentationName = 'VSD.' + logfile[12:] + '.' + subID
         
-        nib.save(img, os.path.join('/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + segmentationName + '.nii.gz'))
+        nib.save(img, '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + segmentationName + '.nii.gz')
+        
+        
+        #out = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + segmentationName + '.mha'
+        #hdr = img.header
+        #data = img.get_data()
+        #medpy.io.save(data, out, hdr )
+        
+        
         my_logger('Saved segmentation of subject at: ' + '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/Predictions/' + segmentationName + '.nii.gz', logfile)
     #p = p+1
     #print(subjectIndex)
@@ -163,14 +196,16 @@ def fullHeadSegmentation2(model, testChannels, testLabels, subjectIndex, output_
     # print("Mean test performance: " + str(np.mean(test_performance,axis=0)))
     #print('Total egmentation on subject took seconds:')
     #print(round(time.time()-t1,2))
+        
+#########################  SEGMENTATION #########################################
     
-    
-
-
+list_subjects_fullSegmentation = range(test_subjects)
+dice_compare = True
+dsc = []
 statistics = []
 statistics_mean = []
 for subjectIndex in list_subjects_fullSegmentation: 
-    fullHeadSegmentation2(model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, logfile,epoch, saveSegmentation)
+    fullHeadSegmentation2(dice_compare, dsc, model, testChannels, testLabels, subjectIndex, output_classes, dpatch, size_test_minibatches, logfile,epoch, saveSegmentation)
     my_logger('--------------- TEST EVALUATION ---------------', logfile)
     my_logger('          Full segmentation evaluation of subject' + str(subjectIndex), logfile)
     
