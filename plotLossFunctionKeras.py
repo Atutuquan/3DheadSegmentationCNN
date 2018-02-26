@@ -44,17 +44,17 @@ def makeFiles(argv):
     bashCommand_getVal = "grep 'Validation cost and accuracy' " +  file + " | awk '{print $5}' | grep -o '[0-9].*' | sed 's/,//' "
     bashCommand_getAccVal = "grep 'Validation cost and accuracy' " + file +  " | awk '{print $6}' | grep -o '[0-9].*' | sed 's/]//' "
 
-    bashCommand_getSpec = "grep -A 7 'VALIDATION EVALUATION' " + file + "  | grep 'Specificity' | awk '{print $11}'| sed 's/]//' "
-    bashCommand_getSpec_Test = "grep -A 7 'SUMMARY STATIS' " + file + " | grep 'Specificity' | awk '{print $9}'| sed 's/]//' "
+    bashCommand_getSpec = "grep -A 7 'VALIDATION EVALUATION' " + file + "  | grep 'Specificity' | awk '{print $(NF-1), $NF}' | sed 's|]||' | awk '{print $NF}'"
+    bashCommand_getSpec_Test = "grep -A 7 'SUMMARY STATIS' " + file + " | grep 'Specificity' | awk '{print $(NF-1), $NF}' | sed 's|]||' | awk '{print $NF}' "
 
-    bashCommand_getSens = "grep -A 7 'VALIDATION EVALUATION' " + file + "  | grep 'Sensitivity' | awk '{print $11}'| sed 's/]//' "
-    bashCommand_getSens_Test = "grep -A 7 'SUMMARY STATIS' " + file + " | grep 'Sensitivity' | awk '{print $9}'| sed 's/]//' "
+    bashCommand_getSens = "grep -A 7 'VALIDATION EVALUATION' " + file + "  | grep 'Sensitivity' | awk '{print $(NF-1), $NF}' | sed 's|]||' | awk '{print $NF}' "
+    bashCommand_getSens_Test = "grep -A 7 'SUMMARY STATIS' " + file + " | grep 'Sensitivity' | awk '{print $(NF-1), $NF}' | sed 's|]||' | awk '{print $NF}' "
 
-    bashCommand_getPrec = "grep -A 7 'VALIDATION EVALUATION' " + file + "  | grep 'Precision' | awk '{print $11}'| sed 's/]//' "
-    bashCommand_getPrec_Test = "grep -A 7 'SUMMARY STATIS' " + file + " | grep 'Precision' | awk '{print $9}'| sed 's/]//' "
+    bashCommand_getPrec = "grep -A 7 'VALIDATION EVALUATION' " + file + "  | grep 'Precision' | awk '{print $(NF-1), $NF}' | sed 's|]||' | awk '{print $NF}' "
+    bashCommand_getPrec_Test = "grep -A 7 'SUMMARY STATIS' " + file + " | grep 'Precision' | awk '{print $(NF-1), $NF}' | sed 's|]||' | awk '{print $NF}' "
 
-    bashCommand_getDSC = "grep -A 7 'VALIDATION EVALUATION' " + file + "  | grep 'DCS' | awk '{print $11}'| sed 's/]//' "
-    bashCommand_getDSC_Test = "grep -A 7 'SUMMARY STATIS' " + file + " | grep 'DCS' | awk '{print $9}'| sed 's/]//' "
+    bashCommand_getDSC = "grep -A 7 'VALIDATION EVALUATION' " + file + "  | grep 'DCS' | awk '{print $(NF-1), $NF}' | sed 's|]||' | awk '{print $NF}' "
+    bashCommand_getDSC_Test = "grep -A 7 'SUMMARY STATIS' " + file + " | grep 'DCS' | awk '{print $(NF-1), $NF}' | sed 's|]||' | awk '{print $NF}' "
 
     p = Popen(bashCommand_getTrain, stdout=PIPE, shell=True)
     output = p.communicate()
@@ -220,23 +220,7 @@ def makeFiles(argv):
     plt.plot(range(len(DSC_test)),DSC_test,'k-')
     plt.title(('DCS'))
     
-
-
-    
-
     plt.show()
-
-    #plt.plot(train)
-    
-    #plt.plot(val)
-
-    #plt.plot(acc)
-
-    #plt.plot(Tacc)
-
-    #plt.show()
-
-
 
 
     '''plt.clf()

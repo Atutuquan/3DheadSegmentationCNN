@@ -11,7 +11,7 @@ wd = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/'
 
 
 #availabledatasets :'ATLAS17', 'BRATS15', 'BRATS15_TEST', 'BRATS15_wholeNormalized' ,BRATS15_ENTIRE', 'Custom' (for explicitly giving channels)
-dataset = 'BRATS15_ENTIRE'
+dataset = 'ATLAS17'
 
 ############################## Load dataset #############################
 
@@ -86,16 +86,17 @@ elif dataset == 'BRATS15_ENTIRE':
 elif dataset == 'ATLAS17':
     '''Example data ATLAS 2017 - 1 input channel - 2 output classes'''
     
-    trainChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/splits1/ChannelsTrain_splits1.cfg']
-    trainLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/splits1/SegmentsTrain_splits1.cfg'
+    trainChannels = ['/home/lukas/Documents/projects/ATLASdataset/input/ATLAS_train_T1']
+    trainLabels = '/home/lukas/Documents/projects/ATLASdataset/input/ATLAS_train_GT'
     
-    validationChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/validation/splits1/ChannelsVal_splits1.cfg']
-    validationLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/train/validation/splits1/SegmentsVal_splits1.cfg'
+    validationChannels = ['/home/lukas/Documents/projects/ATLASdataset/input/ATLAS_test_T1']
+    validationLabels = '/home/lukas/Documents/projects/ATLASdataset/input/ATLAS_test_GT'
 
-    testChannels = ['/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/test/splits1/ChannelsTest_splits1.cfg']
-    testLabels = '/home/lukas/Documents/projects/deepmedic/examples/configFiles/deepMedicATLAS/test/splits1/SegmentsTest_splits1.cfg'
+    testChannels = validationChannels
+    testLabels = validationLabels
 
     output_classes = 2 # Including background!!
+    test_subjects = 60
     
     
 elif dataset =='Custom':
@@ -128,7 +129,7 @@ elif dataset =='Custom':
     output_classes = 5
 #-------------------------------------------------------------------------------------------------------------
 
-test_subjects = 54
+
 
 
 # Parameters // this could be assigned in separate configuration files
@@ -138,8 +139,8 @@ usingAlternativeModel = False
 dpatch=51
 L2 = 0.0001
 load_model = False
-path_to_model = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/models/TrainSessionBRATS15_WHOLE_DeepMedic2018-02-17_1742.h5'
-logfile_model = 'TrainSessionBRATS15_WHOLE_DeepMedic2018-02-17_1742'
+path_to_model = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras//Output/models/TrainSessionBRATS15_ENTIRE_DeepMedic2018-02-20_1641.h5'
+logfile_model = 'TrainSessionBRATS15_ENTIRE_DeepMedic2018-02-20_1641'
 num_channels = 4
 num_channels = len(trainChannels)
 dropout = [0,0]  # dropout for last two fully connected layers
@@ -147,24 +148,25 @@ learning_rate = 0.0001
 optimizer_decay = 0
 
 ########################################## TRAIN PARAMETERS
-num_iter = 50
-epochs = 10
+num_iter = 10
+epochs = 50
 samplingMethod_train = 1
 
-n_patches = 5206
-n_subjects = 274 # Check that this is not larger than subjects in training file
-size_minibatches = 70 # Check that this value is not larger than the ammount of patches per subject per class
+n_patches = 4800
+n_subjects = 240 # Check that this is not larger than subjects in training file
+size_minibatches = 80 # Check that this value is not larger than the ammount of patches per subject per class
 
-quickmode = True # Train without validation. Full segmentation often but only report dice score (whole)
+quickmode = False # Train without validation. Full segmentation often but only report dice score (whole)
 n_patches_val = 500
-n_subjects_val = 50 # Check that this is not larger than subjects in validation file
+n_subjects_val = 60 # Check that this is not larger than subjects in validation file
 size_minibatches_val = 500 # Check that this value is not larger than the ammount of patches per subject per class
 samplingMethod_val = 0
 
 ########################################### TEST PARAMETERS
-n_fullSegmentations = 10
-#list_subjects_fullSegmentation = [0,1,2,3,4,12,13,14,15]
-epochs_for_fullSegmentation = [0,1,2,3,4,5,6,7,8,9]
+quick_segmentation = True
+n_fullSegmentations = 60
+#list_subjects_fullSegmentation = []
+epochs_for_fullSegmentation = range(50)
 size_test_minibatches = 200
 saveSegmentation = True
 

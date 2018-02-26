@@ -10,10 +10,10 @@ import nibabel as nib
 from helpers import normalizeMRI
 
 
-Channels = ['/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/flairChannels',
-            '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/t1cChannels',
-            '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/t1Channels',
-            '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/t2Channels']
+Channels = ['/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testFlair',
+            '/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testT1',
+            '/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testT1c',
+            '/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testT2']
 '''
 Channels = ['/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/flairChannels',
             '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/t1cChannels',
@@ -29,7 +29,7 @@ for modality in range(len(Channels)):
     
     for subject in range(len(lines)):
         print(subject)
-        
+        '''
         # Normalization of only brain tissue (actually, only > background tissue, can also leave some brain tissue out)
         name = lines[subject][:-1]
         img = nib.load(name)
@@ -47,4 +47,4 @@ for modality in range(len(Channels)):
         data1 = (data - m)/s
         img = nib.Nifti1Image(data1, img.affine)
         nib.save(img, name )
-        '''
+        

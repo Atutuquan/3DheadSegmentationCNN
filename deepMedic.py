@@ -15,6 +15,8 @@ from random import sample
 from keras.callbacks import ModelCheckpoint#, EarlyStopping, History
 import numpy as np
 from configFile import *   # Get all session parameters
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 os.chdir(wd)
 logfile = 'Output/logs/TrainSession' + dataset + '_DeepMedic' + time.strftime("%Y-%m-%d_%H%M")
@@ -189,10 +191,11 @@ for epoch in xrange(0,epochs):
         l = l+1
     my_logger('Total training this epoch took ' + str(round(time.time()-t1,2)) + ' seconds',logfile)
     
-    
+    my_logger('###### SAVING TRAINED MODEL AT : ' + wd +'/Output/models/'+logfile[12:]+'.h5', logfile)
+    model.save(wd+'/Output/models/'+logfile[12:]+'.h5')
     ####################### FULL HEAD SEGMENTATION ##############################
     
-    if not quickmode:
+    if not quick_segmentation:
         
         if epoch in epochs_for_fullSegmentation:
             my_logger("------------------------------------------------------", logfile)
@@ -230,11 +233,8 @@ for epoch in xrange(0,epochs):
             my_logger('Overall DCS:                           ' + str(statistics_mean[2]), logfile)
             my_logger('Overall AUC-ROC:                       ' + str(statistics_mean[5]), logfile)
     
-        my_logger('###### SAVING TRAINED MODEL AT : ' + wd +'/Output/models/'+logfile[12:]+'.h5', logfile)
-        model.save(wd+'/Output/models/'+logfile[12:]+'.h5')
-        #model.save_weights(wd+'/Output/models/'+logfile[12:]+'_weights_.h5')
 
-    elif quickmode:
+    elif quick_segmentation:
          if epoch in epochs_for_fullSegmentation:
             my_logger("------------------------------------------------------", logfile)
             my_logger("                 FULL HEAD SEGMENTATION", logfile)
@@ -249,5 +249,19 @@ for epoch in xrange(0,epochs):
                 my_logger('--------------- TEST EVALUATION ---------------', logfile)
                 my_logger('          Full segmentation evaluation of subject' + str(subjectIndex), logfile)
                 my_logger('DCS ' + str(dsc[-1]),logfile)
-            my_logger('Average DCS ' + str(np.round(np.mean(dsc),2)),logfile)
-                
+            my_logger('         FULL SEGMENTATION SUMMARY STATISTICS ', logfile)
+            my_logger('Overall DCS:   ' + str(np.round(np.mean(dsc),2)),logfile)
+            
+            plt.hist(dsc, 80, edgecolor = 'black')
+            plt.axvline(np.mean(dsc), color = 'red', linewidth = 3)
+            plt.axvline(0.89, color = 'b', linestyle='dashed', linewidth = 3)
+            plt.xlabel('Dice score')
+            plt.ylabel('Frequency')
+            plt.title('Dice score distribution over 274 BRATS training set, on epoch ' + str(epoch) )
+            #create legend
+            handles = [Rectangle((0,0),1,1,color=c,ec="k") for c in ['r','b']]
+            labels= ["Achieved (" + str(np.round(np.mean(dsc),2)) + ")","DeepMedic (0.89)"]
+            plt.legend(handles, labels)
+            plt.savefig('/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/images/diceHist_epoch' + str(epoch) + '_' + logfile_model + '.png')
+            
+    

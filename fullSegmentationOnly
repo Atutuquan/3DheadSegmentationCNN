@@ -8,30 +8,44 @@ Created on Fri Feb 16 11:27:14 2018
 
 import nibabel as nib
 import numpy as np
-import medpy
-from helpers import dice_completeImages, getSubjectsToSample, extractImagePatch, extractLabels
-
+from helpers import dice_completeImages, getSubjectsToSample, extractImagePatch, extractLabels, my_logger
+from configFile import * 
 
 #===============================
-'''
+
 from keras.models import load_model  
+path_to_model = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Output/models/TrainSessionBRATS15_ENTIRE_DeepMedic2018-02-20_1641.h5'
 model = load_model(path_to_model)
+logfile_model = 'TrainSessionBRATS15_ENTIRE_DeepMedic2018-02-20_1641'
 logfile = 'Output/logs/'  + logfile_model
-'''
+
 
 
 #=========================================================================================================
-'''BRATS 2015 TEST SET'''
-'''
-testChannels = ['/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testFlair_2018',
-                '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testT1_2018',
-                '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testT1c_2018',
-                '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testT2_2018']
-testLabels = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testGT_2018'
+'''BRATS 2015 TEST SET N=110'''
+
+testChannels = ['/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testFlair',
+            '/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testT1',
+            '/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testT1c',
+            '/home/lukas/Documents/projects/public_SegmentationData/Testing/HGG_LGG/testT2']
+#testLabels = '/home/lukas/Documents/projects/brainSegmentation/deepMedicKeras/Data/BRATS15_splits/whole_image_normalized/testGT_2018'
+testLabels = 0
+output_classes = 5
+test_subjects = 110
 '''
 
-testChannels = trainChannels
-testLabels = trainLabels
+
+#BRATS N=274 traiining set
+testChannels = ['/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/flairChannels',
+                    '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/t1Channels',
+                    '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/t1cChannels',
+                    '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/BRATS_fully_normalized_nifti/t2Channels']
+testLabels = '/home/lukas/Documents/projects/public_SegmentationData/BRATS2015_Training/allGTlabels'
+test_subjects = 274
+'''
+
+#testChannels = trainChannels
+#testLabels = trainLabels
 #=========================================================================================================
 
   
@@ -40,7 +54,7 @@ def sampleTestData2(testChannels, testLabels, subjectIndex, output_classes, dpat
     "Actually something like sampleTraindata, thereby inputting extractImagePatch with all voxels of a subject"
     "Voxel coordinates start at index [26] and then increase by 17 in all dimensions."    
     
-    if len(testLabels) == 0:
+    if testLabels == 0:
         
         num_channels = len(testChannels)
         labelsFile = open(testChannels[0],"r")   
@@ -200,7 +214,7 @@ def fullHeadSegmentation2(dice_compare, dsc, model, testChannels, testLabels, su
 #########################  SEGMENTATION #########################################
     
 list_subjects_fullSegmentation = range(test_subjects)
-dice_compare = True
+dice_compare = False
 dsc = []
 statistics = []
 statistics_mean = []

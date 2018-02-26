@@ -65,7 +65,7 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
             for j in range(0,patches_per_subject[i]):
                 # unform sampling
                 voxelIndexesSubj.append((np.random.randint(0+dpatch/2, shapes[i][0]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][1]-(dpatch/2)-1),np.random.randint(0+dpatch/2, shapes[i][2]-(dpatch/2)-1)))
-                
+
             allVoxelIndexes.append(voxelIndexesSubj)
             
         random.shuffle(allVoxelIndexes[i])
@@ -90,6 +90,7 @@ def generateVoxelIndexes(subjectIndexes, shapes, patches_per_subject, dpatch, n_
                 for index in ix:
                     newVoxel = [np.random.randint(dpatch/2, shapes[i][0]-(dpatch/2)-1),np.random.randint(dpatch/2, shapes[i][1]-(dpatch/2)-1),np.random.randint(dpatch/2, shapes[i][2]-(dpatch/2)-1)]
                     backgroundVoxels[backgroundVoxels.index(index)] = newVoxel
+
 
             #backgroundVoxels = bg[random.sample(xrange(0,len(bg)), patches_per_subject[i]/2)].tolist()
             allVoxelIndexes.append(foregroundVoxels + backgroundVoxels)
@@ -226,7 +227,6 @@ def get_patches_per_subject( n_patches, n_subjects):
 def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patches, dpatch, debug=False):
     subjects = getSubjectsToSample(channel, subjectIndexes)
     vol = np.zeros((n_patches,dpatch,dpatch,dpatch),dtype='int16')
-    
     k = 0
     if (len(subjectIndexes) > 1):
         for i in xrange(0,len(voxelCoordinates)):
@@ -234,16 +234,17 @@ def extractImagePatch(channel, subjectIndexes, patches, voxelCoordinates, n_patc
             proxy_img = nib.load(subject)
             
             img_data = np.array(proxy_img.get_data(),dtype='int16')
+
             
             #img_data = normalizeMRI(img_data)
             
             for j in xrange(0,len(voxelCoordinates[i])):     
-                D1,D2,D3 = voxelCoordinates[i][j]        
+                D1,D2,D3 = voxelCoordinates[i][j]    
+                
+                
+                vol[k,:,:,:] = img_data[D1-(dpatch/2):D1+(dpatch/2)+1,D2-(dpatch/2):D2+(dpatch/2)+1,D3-(dpatch/2):D3+(dpatch/2)+1]
                 #print(i,j)
                 #print(D1,D2,D3)
-               
-                vol[k,:,:,:] = img_data[D1-(dpatch/2):D1+(dpatch/2)+1,D2-(dpatch/2):D2+(dpatch/2)+1,D3-(dpatch/2):D3+(dpatch/2)+1]
-                
                 
                 k=k+1
             proxy_img.uncache()
